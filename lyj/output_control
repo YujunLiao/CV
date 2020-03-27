@@ -1,0 +1,37 @@
+DG_rotation:
+
+std output file name:
+script_name GPU_number time
+std output file content:
+time
+all_parameter
+Dataset size:
+result output file name:
+DG_rotaion/network/target_domain/rotation_weight bias_whole_image
+result output content:
+time
+target_domain
+rotation_weight
+bias_whole_image
+
+
+
+DA_rotation:
+
+std output file name:
+script_name GPU_number time
+std output file content:
+time
+all_parameter
+Dataset size:
+result output file name:
+DA_rotaion/network/target_domain/rotation_weight bias_whole_image t_rotation_weight entropy_weight
+result output content:
+time
+target_domain
+rotation_weight
+bias_whole_image
+t_rotation_weight
+entropy_weight
+
+
