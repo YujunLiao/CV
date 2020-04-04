@@ -1,0 +1,15 @@
+#project_path="$HOME/Files/pycharm_project/DG_rotation/"
+ssh -t local3 "
+project_path=$HOME/Files/project/pycharm/CV/;
+script=\${project_path}scripts/test;
+GPU=0;
+
+echo "GPU \$GPU"
+echo "hostname \$\(hostname\)"
+echo "script \$script"
+/bin/bash \$script
+# nohup /bin/bash \$script
+bash -i; "
+# $command
+#echo $project_path
+
