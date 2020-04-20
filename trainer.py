@@ -10,7 +10,7 @@ from torch.nn import functional as F
 from time import time, strftime, localtime
 import argparse
 # from trainer_utils.model.MyModel import MyModel
-from trainer_utils.model.MyModel import MyModel
+from trainer_utils.model.MyModel import MyModel, get_model
 
 
 from trainer_utils.logger.Logger import Logger
@@ -83,7 +83,7 @@ class Trainer:
         # self.args = args.args
         self.args = args
         self.device = device
-        self.model = my_model.model.to(device)
+        self.model = my_model.to(device)
         self.output_manager=output_manager
 
         self.train_data_loader = my_data_loader.train_data_loader
@@ -264,8 +264,8 @@ class Container:
         pass
 
 def lazy_train(my_training_arguments, output_manager):
-    my_model = MyModel(my_training_arguments)
-    is_patch_based_or_not = my_model.model.is_patch_based()
+    my_model = get_model(my_training_arguments)
+    is_patch_based_or_not = my_model.is_patch_based()
     temp = Container()
     temp.training_arguments = my_training_arguments
     temp.args = my_training_arguments
