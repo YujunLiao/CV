@@ -75,15 +75,19 @@ def get_args():
     # parser.add_argument("--parameters_lists", type=tuple, nargs='+')
     parser.add_argument("--repeat_times", type=int)
     parser.add_argument("--redirect_to_file", default=0, type=int)
+
+    parser.add_argument(
+        '--device', type=str,
+        default='cuda' if torch.cuda.is_available() else 'cpu')
     return parser.parse_args()
 
 
 class Trainer:
-    def __init__(self, args, my_model, my_data_loader, my_optimizer, my_scheduler, device, output_manager, ):
+    def __init__(self, args, my_model, my_data_loader, my_optimizer, my_scheduler, output_manager, ):
         # self.args = args.args
         self.args = args
-        self.device = device
-        self.model = my_model.to(device)
+        self.device = args.device
+        self.model = my_model.to(args.device)
         self.output_manager=output_manager
 
         self.train_data_loader = my_data_loader.train_data_loader
@@ -264,16 +268,16 @@ class Container:
         pass
 
 def lazy_train(my_training_arguments, output_manager):
-    my_model = get_model(my_training_arguments)
-    is_patch_based_or_not = my_model.is_patch_based()
+    model = get_model(my_training_arguments)
+    is_patch_based_or_not = model.is_patch_based()
     temp = Container()
     temp.training_arguments = my_training_arguments
     temp.args = my_training_arguments
-    DG_rotation_data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
-    my_optimizer = MyOptimizer(temp, my_model)
-    my_scheduler = MyScheduler(temp, my_optimizer)
+    data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
+    optimizer = MyOptimizer(temp, model)
+    scheduler = MyScheduler(temp, optimizer)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    trainer = Trainer(temp.training_arguments, my_model, DG_rotation_data_loader, my_optimizer, my_scheduler, device, output_manager)
+    trainer = Trainer(temp.training_arguments, model, data_loader, optimizer, scheduler, output_manager)
     trainer.do_training()
 
 
