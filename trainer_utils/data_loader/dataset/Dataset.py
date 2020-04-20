@@ -64,7 +64,7 @@ class MyDataset:
             train_dataset:Content: train_data_paths, train_labels
             validation_dataset:Content: validation_data_paths, validation_labels
         """
-        training_arguments = my_training_arguments.training_arguments
+        training_arguments = my_training_arguments.args
 
         train_dataset_list = []
         validation_dataset_list = []
@@ -148,7 +148,7 @@ class MyDataset:
         return train_dataset, validation_dataset
 
     def _get_test_dataset(self, my_training_arguments, is_patch_based_or_not):
-        training_arguments = my_training_arguments.training_arguments
+        training_arguments = my_training_arguments.args
 
 
         # path_of_txt_list_of_data refer to where are the txt files that record all images' path, for example,

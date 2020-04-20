@@ -15,7 +15,7 @@ from torch.utils.data import Dataset
 class DARotationDataset():
     def __init__(self, my_training_arguments, is_patch_based_or_not):
         my_dataset = MyDataset(my_training_arguments, is_patch_based_or_not)
-        training_arguments = my_training_arguments.training_arguments
+        training_arguments = my_training_arguments.args
         max_number_of_train_dataset = training_arguments.limit_source
         max_number_of_test_dataset = training_arguments.limit_target
         img_transformer, tile_transformer = self._get_train_transformers(training_arguments)

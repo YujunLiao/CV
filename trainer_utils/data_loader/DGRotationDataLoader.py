@@ -56,7 +56,7 @@ class DGRotationDataLoader:
         # TODO(lyj): drop_last
         train_data_loader = torch.utils.data.DataLoader(
             train_dataset,
-            batch_size=my_training_arguments.training_arguments.batch_size,
+            batch_size=my_training_arguments.args.batch_size,
             shuffle=True,
             num_workers=4,
             pin_memory=True,
@@ -64,7 +64,7 @@ class DGRotationDataLoader:
         )
         validation_data_loader = torch.utils.data.DataLoader(
             validation_dataset,
-            batch_size=my_training_arguments.training_arguments.batch_size,
+            batch_size=my_training_arguments.args.batch_size,
             shuffle=False,
             num_workers=4,
             pin_memory=True,
@@ -73,7 +73,7 @@ class DGRotationDataLoader:
 
         test_data_loader = torch.utils.data.DataLoader(
             test_dataset,
-            batch_size=my_training_arguments.training_arguments.batch_size,
+            batch_size=my_training_arguments.args.batch_size,
             shuffle=False,
             num_workers=4,
             pin_memory=True,

@@ -1,0 +1,45 @@
+/home/lyj/Files/project/pycharm/pytorch_interpreter/bin
+
+hh="
+hello
+sfgsdf
+sfgsdfsf
+sdf
+"
+
+echo $hh
+
+
+#project_path="$HOME/Files/pycharm_project/DG_rotation/"
+ssh -t local3 "
+project_path=$HOME/Files/project/pycharm/CV/;
+scripts_path=\${project_path}scripts/;
+GPU=0;
+echo   "GPU \$GPU"
+run_script()
+{
+  echo "Using Gpu \$2 run \$scripts_path\$1 on \$\( hostname \)"
+  /bin/bash \$scripts_path\$1 \$2
+};
+nohup_run_script()
+{
+  echo "Using Gpu \$2 run \$scripts_path\$1 on \$\( hostname \) nohup"
+  nohup /bin/bash \$scripts_path\$1 \$2
+};
+echo \$(date)
+run_script tt 1;
+#nohup_run_script tt 1;
+bash -i; "
+# $command
+#echo $project_path
+
+
+
+/bin/bash \$scripts_path\$1 \$2
+
+  echo "Using Gpu \$2 run \$scripts_path\$1 on \$\( hostname \) nohup"
+  nohup /bin/bash \$scripts_path\$1 \$2
+
+  echo \$(date)
+run_script tt 1;
+#nohup_run_script tt 1;

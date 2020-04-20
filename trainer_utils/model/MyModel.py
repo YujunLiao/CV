@@ -24,7 +24,7 @@ class MyModel:
         :param my_training_arguments:Name of network, the number of classes of unsupervised and
         supervised task.
         """
-        self._get_model_function = model_dictionary[my_training_arguments.training_arguments.network]
+        self._get_model_function = model_dictionary[my_training_arguments.network]
         self.model = self._get_model_function(
             # Jigsaw class of 0 refers to original picture, apart from the original one, there
             # are another 30 classes, in total 31 classes of jigsaw pictures.
@@ -32,8 +32,8 @@ class MyModel:
 
             # When using rotation technology as the unsupervised task, there are in total
             # 4 classes, which are original one, 90, 180, 270 degree.
-            jigsaw_classes=my_training_arguments.training_arguments.number_of_unsupervised_classes,
-            classes=my_training_arguments.training_arguments.n_classes
+            jigsaw_classes=my_training_arguments.number_of_unsupervised_classes,
+            classes=my_training_arguments.n_classes
         )
 
 

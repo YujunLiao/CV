@@ -1,7 +1,6 @@
-# import socket
-# print(1, socket.gethostname())
-import numpy as np
-import torch
-print(torch.tensor([1,2,3]).argmax())
-np.save([1,2], )
+import argparse
+from trainer_utils.data_loader.dataset.PDataset import available_domains
+from trainer_utils.model.MyModel import model_dictionary
+
+
 

@@ -1,15 +1,16 @@
-#project_path="$HOME/Files/pycharm_project/DG_rotation/"
-ssh -t local3 "
-project_path=$HOME/Files/project/pycharm/CV/;
-script=\${project_path}scripts/test;
-GPU=0;
+# project_path=\$HOME/Files/pycharm_project/DG_rotation/;
+# script=\${project_path}scripts/DG_R_R18;
+ssh -t local "
+project_path=\$HOME/Files/pycharm_project/CV/
+script=\${project_path}scripts/DG_R_R18_t
+GPU=1
 
+echo \$(date)
 echo "GPU \$GPU"
 echo "hostname \$\(hostname\)"
 echo "script \$script"
-/bin/bash \$script
-# nohup /bin/bash \$script
-bash -i; "
-# $command
-#echo $project_path
+/bin/bash \$script \$GPU
+# nohup /bin/bash \$script \$GPU
+# bash -i;
+"
 

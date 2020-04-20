@@ -1,8 +1,4 @@
 
-# Complex input should be an entity of class.
-# Name of method in a class should contain an obvious verbal, like get_something().
-# set attribute within __init__(self) function.
-# 每天学一点，每天改一点
 import sys
 
 import os
@@ -11,13 +7,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from time import time, strftime, localtime
-
+import argparse
 # from trainer_utils.model.MyModel import MyModel
 from trainer_utils.model.MyModel import MyModel
 
 
 from trainer_utils.logger.Logger import Logger
-from trainer_utils.training_argument.DGRotationTrainingArgument import DGRotationTrainingArgument
 from trainer_utils.data_loader.DGRotationDataLoader import DGRotationDataLoader
 from trainer_utils.optimizer.MyOptimizer import MyOptimizer
 from trainer_utils.scheduler.MyScheduler import MyScheduler
@@ -25,9 +20,65 @@ from trainer_utils.output_manager.OutputManager import OutputManager
 from trainer_utils.lazy_man.LazyMan import LazyMan, LazyMan2
 import socket
 
-class DGRotationTrainer:
-    def __init__(self, my_training_arguments, my_model, my_data_loader, my_optimizer, my_scheduler, device, output_manager):
-        self.training_arguments = my_training_arguments.args
+def parameters_lists(arg):
+    return [float(x) for x in arg.split(',')]
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--network")
+    parser.add_argument("--source", nargs='+')
+    parser.add_argument("--target", help="Target")
+    parser.add_argument("--n_classes", "-c", type=int)
+    parser.add_argument("--number_of_unsupervised_classes", type=int, default=4)
+    parser.add_argument("--unsupervised_task_weight", type=float)
+
+    parser.add_argument("--ooo_weight", type=float, default=0)
+    # image_size: For example, an image's size is 3*225*225
+    parser.add_argument("--image_size", type=int, default=225)
+    # In general, in each epoch, all the samples are used for one time.
+    parser.add_argument("--epochs", "-e", type=int, default=30)
+    # batch_size (int, optional): The number of samples used for training in each iteration.
+    parser.add_argument("--batch_size", "-b", type=int, default=128)
+    parser.add_argument("--val_size", type=float, default="0.1")
+    parser.add_argument("--learning_rate", "-l", type=float, default=.01)
+    parser.add_argument("--bias_whole_image", default=None, type=float)
+    parser.add_argument("--classify_only_ordered_images_or_not", type=bool)
+
+    # Argument for logger.
+    parser.add_argument("--tf_logger", type=bool, default=True)
+    parser.add_argument("--folder_name", default=None)
+
+    #
+    parser.add_argument("--limit_source", default=None, type=int)
+    parser.add_argument("--limit_target", default=None, type=int)
+
+    parser.add_argument("--train_all", default=True, type=bool)
+    parser.add_argument("--suffix", default="")
+    parser.add_argument("--nesterov", default=False, type=bool)
+
+    # Arguments for Test-Time Augmentation
+    parser.add_argument("--TTA", type=bool, default=False)
+    parser.add_argument("--min_scale", default=0.8, type=float)
+    parser.add_argument("--max_scale", default=1.0, type=float)
+    parser.add_argument("--random_horiz_flip", default=0.0, type=float)
+    parser.add_argument("--jitter", default=0.0, type=float)
+    parser.add_argument("--tile_random_grayscale", default=0.1, type=float)
+
+    # Arguments for lazy training
+    parser.add_argument("--domains_list", nargs='+')
+    parser.add_argument("--target_domain_list", nargs='+')
+    parser.add_argument("--parameters_lists", nargs='+'
+                        , type=lambda params:[float(_) for _ in params.split(',')])
+    # parser.add_argument("--parameters_lists", type=tuple, nargs='+')
+    parser.add_argument("--repeat_times", type=int)
+    parser.add_argument("--redirect_to_file", default=0, type=int)
+    return parser.parse_args()
+
+
+class Trainer:
+    def __init__(self, args, my_model, my_data_loader, my_optimizer, my_scheduler, device, output_manager, ):
+        # self.args = args.args
+        self.args = args
         self.device = device
         self.model = my_model.model.to(device)
         self.output_manager=output_manager
@@ -39,14 +90,14 @@ class DGRotationTrainer:
         self.optimizer = my_optimizer.optimizer
         self.scheduler = my_scheduler.scheduler
 
-        self.classify_only_ordered_images_or_not = self.training_arguments.classify_only_ordered_images_or_not
-        self.number_of_images_classes = self.training_arguments.n_classes
+        self.classify_only_ordered_images_or_not = self.args.classify_only_ordered_images_or_not
+        self.number_of_images_classes = self.args.n_classes
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
-        if self.training_arguments.target in self.training_arguments.source:
-            self.target_domain_index = self.training_arguments.source.index(self.training_arguments.target)
+        if self.args.target in self.args.source:
+            self.target_domain_index = self.args.source.index(self.args.target)
             print("Target in source: %d" % self.target_domain_index)
-            print(self.training_arguments.source)
+            print(self.args.source)
         else:
             self.target_domain_index = None
 
@@ -63,7 +114,7 @@ class DGRotationTrainer:
             rotation_predict_label, class_predict_label = self.model(data)  # , lambda_val=lambda_val)
             unsupervised_task_loss = criterion(rotation_predict_label, rotation_label)
 
-            if self.training_arguments.classify_only_ordered_images_or_not:
+            if self.args.classify_only_ordered_images_or_not:
                 if self.target_domain_index is not None:
                     # images_should_be_selected_or_not is a 128*1 list containing True or False.
                     images_should_be_selected_or_not = (rotation_label == 0) & (domain_index_of_images_in_this_patch != self.target_domain_index)
@@ -81,7 +132,7 @@ class DGRotationTrainer:
             _, cls_pred = class_predict_label.max(dim=1)
             _, jig_pred = rotation_predict_label.max(dim=1)
             # _, domain_pred = domain_logit.max(dim=1)
-            loss = supervised_task_loss + unsupervised_task_loss * self.training_arguments.unsupervised_task_weight
+            loss = supervised_task_loss + unsupervised_task_loss * self.args.unsupervised_task_weight
 
             loss.backward()
             self.optimizer.step()
@@ -155,13 +206,13 @@ class DGRotationTrainer:
         print('--------------------------------------------------------')
         print("Dataset size: trainer %d, val %d, test %d" % (len(self.train_data_loader.dataset), len(self.validation_data_loader.dataset), len(self.test_data_loader.dataset)))
         print('--------------------------------------------------------')
-        print(self.training_arguments)
+        print(self.args)
         print('--------------------------------------------------------')
 
         # TODO(lyj):
-        self.logger = Logger(self.training_arguments, update_frequency=30)  # , "domain", "lambda"
-        self.results = {"val": torch.zeros(self.training_arguments.epochs), "test": torch.zeros(self.training_arguments.epochs)}
-        for self.current_epoch in range(self.training_arguments.epochs):
+        self.logger = Logger(self.args, update_frequency=30)  # , "domain", "lambda"
+        self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
+        for self.current_epoch in range(self.args.epochs):
             self.scheduler.step()
             lrs = self.scheduler.get_lr()
             self.logger.new_epoch(lrs)
@@ -175,12 +226,12 @@ class DGRotationTrainer:
 
         # print("Best val %g, corresponding test %g - best test: %g" % (val_res.max(), test_res[idx_best], test_res.max()))
         print(strftime("%Y-%m-%d %H:%M:%S", localtime()))
-        print(self.training_arguments.target)
-        print(self.training_arguments.source)
-        print("unsupervised_task_weight:", self.training_arguments.unsupervised_task_weight)
+        print(self.args.target)
+        print(self.args.source)
+        print("unsupervised_task_weight:", self.args.unsupervised_task_weight)
         # TODO(change bias whole image)
-        print("bias_hole_image:", self.training_arguments.bias_whole_image)
-        print("only_classify the ordered image:", self.training_arguments.classify_only_ordered_images_or_not)
+        print("bias_hole_image:", self.args.bias_whole_image)
+        print("only_classify the ordered image:", self.args.classify_only_ordered_images_or_not)
         print("Highest accuracy on validation set appears on epoch ", val_res.argmax().data)
         print("Highest accuracy on test set appears on epoch ", test_res.argmax().data)
         print("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best])
@@ -190,12 +241,12 @@ class DGRotationTrainer:
         self.output_manager.write_to_output_file([
             '--------------------------------------------------------',
             str(strftime("%Y-%m-%d %H:%M:%S", localtime())),
-            self.training_arguments.source,
-            "target domain:" + self.training_arguments.target,
-            "jigweight:" + str(self.training_arguments.unsupervised_task_weight),
-            "bias_hole_image:" + str(self.training_arguments.bias_whole_image),
-            "only_classify the ordered image:" + str(self.training_arguments.classify_only_ordered_images_or_not),
-            "batch_size:" + str(self.training_arguments.batch_size) + " learning_rate:" + str(self.training_arguments.learning_rate),
+            self.args.source,
+            "target domain:" + self.args.target,
+            "jigweight:" + str(self.args.unsupervised_task_weight),
+            "bias_hole_image:" + str(self.args.bias_whole_image),
+            "only_classify the ordered image:" + str(self.args.classify_only_ordered_images_or_not),
+            "batch_size:" + str(self.args.batch_size) + " learning_rate:" + str(self.args.learning_rate),
             "Highest accuracy on validation set appears on epoch " + str(val_res.argmax().data),
             "Highest accuracy on test set appears on epoch " + str(test_res.argmax().data),
             str("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best]),
@@ -205,47 +256,54 @@ class DGRotationTrainer:
 
         return self.logger, self.model
 
+class Container:
+    def __init__(self):
+        pass
+
 def lazy_train(my_training_arguments, output_manager):
     my_model = MyModel(my_training_arguments)
     is_patch_based_or_not = my_model.model.is_patch_based()
-    DG_rotation_data_loader = DGRotationDataLoader(my_training_arguments, is_patch_based_or_not)
-    my_optimizer = MyOptimizer(my_training_arguments, my_model)
-    my_scheduler = MyScheduler(my_training_arguments, my_optimizer)
+    temp = Container()
+    temp.training_arguments = my_training_arguments
+    temp.args = my_training_arguments
+    DG_rotation_data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
+    my_optimizer = MyOptimizer(temp, my_model)
+    my_scheduler = MyScheduler(temp, my_optimizer)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    trainer = DGRotationTrainer(my_training_arguments, my_model, DG_rotation_data_loader, my_optimizer, my_scheduler, device, output_manager)
+    trainer = Trainer(temp.training_arguments, my_model, DG_rotation_data_loader, my_optimizer, my_scheduler, device, output_manager)
     trainer.do_training()
 
 
 if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
 
-    my_training_arguments = DGRotationTrainingArgument()
+    my_training_arguments = get_args()
     # my_training_arguments.training_arguments.classify_only_ordered_images_or_not=True
-    my_training_arguments.args.TTA = False
-    my_training_arguments.args.nesterov = False
+    my_training_arguments.TTA = False
+    my_training_arguments.nesterov = False
 
-    for parameter_pair in my_training_arguments.args.parameters_lists:
+    for parameter_pair in my_training_arguments.parameters_lists:
 
-        my_training_arguments.args.unsupervised_task_weight=parameter_pair[0]
-        my_training_arguments.args.bias_whole_image=parameter_pair[1]
+        my_training_arguments.unsupervised_task_weight=parameter_pair[0]
+        my_training_arguments.bias_whole_image=parameter_pair[1]
         # lazy_man = LazyMan(['CALTECH', 'LABELME', 'PASCAL', 'SUN'])
         # lazy_man = LazyMan(
         #     ['art_painting', 'cartoon', 'sketch', 'photo'],
         #     ['art_painting', 'cartoon', 'sketch', 'photo']
         # )
         lazy_man = LazyMan2(
-            my_training_arguments.args.domains_list,
-            my_training_arguments.args.target_domain_list
+            my_training_arguments.domains_list,
+            my_training_arguments.target_domain_list
         )
 
         output_file_path = \
             '/home/giorgio/Files/pycharm_project/DG_rotation/trainer_utils/output_manager/output_file/' + \
             socket.gethostname() + "/DG_rotation/" + \
-            my_training_arguments.args.network + '/' + \
-            str(my_training_arguments.args.unsupervised_task_weight) + '_' + \
-            str(my_training_arguments.args.bias_whole_image) + '/'
+            my_training_arguments.network + '/' + \
+            str(my_training_arguments.unsupervised_task_weight) + '_' + \
+            str(my_training_arguments.bias_whole_image) + '/'
 
-        if my_training_arguments.args.redirect_to_file == 1:
+        if my_training_arguments.redirect_to_file == 1:
             if not os.path.exists(output_file_path):
                 os.makedirs(output_file_path)
             orig_stdout = sys.stdout
@@ -253,15 +311,16 @@ if __name__ == "__main__":
             sys.stdout = f
 
         for source_and_target_domain in lazy_man.source_and_target_domain_permutation_list:
-            my_training_arguments.args.source=source_and_target_domain['source_domain']
-            my_training_arguments.args.target=source_and_target_domain['target_domain']
+            my_training_arguments.source=source_and_target_domain['source_domain']
+            my_training_arguments.target=source_and_target_domain['target_domain']
 
-            output_manager = OutputManager(
-                output_file_path=output_file_path,
-                output_file_name=my_training_arguments.args.source[0] + '_' + my_training_arguments.args.target
-
-            )
-            for i in range(int(my_training_arguments.args.repeat_times)):
+            # output_manager = OutputManager(
+            #     output_file_path=output_file_path,
+            #     output_file_name=my_training_arguments.source[0] + '_' + my_training_arguments.target
+            #
+            # )
+            output_manager = Container()
+            for i in range(int(my_training_arguments.repeat_times)):
                 lazy_train(my_training_arguments, output_manager)
 
 
