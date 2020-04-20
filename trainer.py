@@ -1,5 +1,6 @@
 
 import sys
+from tensorboardX import SummaryWriter
 
 import os
 
@@ -20,8 +21,6 @@ from trainer_utils.output_manager.OutputManager import OutputManager
 from trainer_utils.lazy_man.LazyMan import LazyMan, LazyMan2
 import socket
 
-def parameters_lists(arg):
-    return [float(x) for x in arg.split(',')]
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -47,6 +46,10 @@ def get_args():
     # Argument for logger.
     parser.add_argument("--tf_logger", type=bool, default=True)
     parser.add_argument("--folder_name", default=None)
+    parser.add_argument("--log_dir",
+                        default='/home/giorgio/Files/pycharm_project/CV/trainer_utils/output_manager/output_file/')
+    parser.add_argument("--log_name", default='log')
+    parser.add_argument("--experiment", default='DG_rot')
 
     #
     parser.add_argument("--limit_source", default=None, type=int)
@@ -277,51 +280,49 @@ def lazy_train(my_training_arguments, output_manager):
 if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
 
-    my_training_arguments = get_args()
+    args = get_args()
     # my_training_arguments.training_arguments.classify_only_ordered_images_or_not=True
-    my_training_arguments.TTA = False
-    my_training_arguments.nesterov = False
+    args.TTA = False
+    args.nesterov = False
 
-    for parameter_pair in my_training_arguments.parameters_lists:
+    for parameter_pair in args.parameters_lists:
 
-        my_training_arguments.unsupervised_task_weight=parameter_pair[0]
-        my_training_arguments.bias_whole_image=parameter_pair[1]
+        args.unsupervised_task_weight=parameter_pair[0]
+        args.bias_whole_image=parameter_pair[1]
         # lazy_man = LazyMan(['CALTECH', 'LABELME', 'PASCAL', 'SUN'])
         # lazy_man = LazyMan(
         #     ['art_painting', 'cartoon', 'sketch', 'photo'],
         #     ['art_painting', 'cartoon', 'sketch', 'photo']
         # )
         lazy_man = LazyMan2(
-            my_training_arguments.domains_list,
-            my_training_arguments.target_domain_list
+            args.domains_list,
+            args.target_domain_list
         )
 
         output_file_path = \
-            '/home/giorgio/Files/pycharm_project/DG_rotation/trainer_utils/output_manager/output_file/' + \
-            socket.gethostname() + "/DG_rotation/" + \
-            my_training_arguments.network + '/' + \
-            str(my_training_arguments.unsupervised_task_weight) + '_' + \
-            str(my_training_arguments.bias_whole_image) + '/'
+            f'{args.log_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/'+\
+            f'{str(args.unsupervised_task_weight)}_{str(args.bias_whole_image)}/'
 
-        if my_training_arguments.redirect_to_file == 1:
+        if args.redirect_to_file == 1:
             if not os.path.exists(output_file_path):
                 os.makedirs(output_file_path)
             orig_stdout = sys.stdout
-            f = open( output_file_path + 'original_record', 'w')
+            f = open(output_file_path+args.log_name, 'w')
             sys.stdout = f
 
         for source_and_target_domain in lazy_man.source_and_target_domain_permutation_list:
-            my_training_arguments.source=source_and_target_domain['source_domain']
-            my_training_arguments.target=source_and_target_domain['target_domain']
+            args.source=source_and_target_domain['source_domain']
+            args.target=source_and_target_domain['target_domain']
 
-            # output_manager = OutputManager(
-            #     output_file_path=output_file_path,
-            #     output_file_name=my_training_arguments.source[0] + '_' + my_training_arguments.target
-            #
-            # )
-            output_manager = Container()
-            for i in range(int(my_training_arguments.repeat_times)):
-                lazy_train(my_training_arguments, output_manager)
+            output_manager = OutputManager(
+                output_file_path=output_file_path,
+                output_file_name=args.source[0] + '_' + args.target
+
+            )
+            # output_manager = Container()
+            # writer = SummaryWriter(log_dir=args.log_dir)
+            for i in range(int(args.repeat_times)):
+                lazy_train(args, output_manager)
 
 
 
