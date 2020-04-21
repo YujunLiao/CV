@@ -101,12 +101,12 @@ class Trainer:
         self.number_of_images_classes = self.args.n_classes
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
-        if self.args.target in self.args.source:
-            self.target_domain_index = self.args.source.index(self.args.target)
-            print("Target in source: %d" % self.target_domain_index)
-            print(self.args.source)
-        else:
-            self.target_domain_index = None
+        # if self.args.target in self.args.source:
+        #     self.target_domain_index = self.args.source.index(self.args.target)
+        #     print("Target in source: %d" % self.target_domain_index)
+        #     print(self.args.source)
+        # else:
+        #     self.target_domain_index = None
 
     def _do_epoch(self):
         criterion = nn.CrossEntropyLoss()
@@ -121,21 +121,23 @@ class Trainer:
             rotation_predict_label, class_predict_label = self.model(data)  # , lambda_val=lambda_val)
             unsupervised_task_loss = criterion(rotation_predict_label, rotation_label)
 
-            if self.args.classify_only_ordered_images_or_not:
-                if self.target_domain_index is not None:
-                    # images_should_be_selected_or_not is a 128*1 list containing True or False.
-                    images_should_be_selected_or_not = (rotation_label == 0) & (domain_index_of_images_in_this_patch != self.target_domain_index)
-                    supervised_task_loss = criterion(
-                        class_predict_label[images_should_be_selected_or_not],
-                        class_label[images_should_be_selected_or_not]
-                    )
-                else:
-                    supervised_task_loss = criterion(class_predict_label[rotation_label == 0], class_label[rotation_label == 0])
+            # if self.args.classify_only_ordered_images_or_not:
+            #     if self.target_domain_index is not None:
+            #         # images_should_be_selected_or_not is a 128*1 list containing True or False.
+            #         images_should_be_selected_or_not = (rotation_label == 0) & (domain_index_of_images_in_this_patch != self.target_domain_index)
+            #         supervised_task_loss = criterion(
+            #             class_predict_label[images_should_be_selected_or_not],
+            #             class_label[images_should_be_selected_or_not]
+            #         )
+            #     else:
+            #         supervised_task_loss = criterion(class_predict_label[rotation_label == 0], class_label[rotation_label == 0])
 
-            elif self.target_domain_index:
-                supervised_task_loss = criterion(class_predict_label[domain_index_of_images_in_this_patch != self.target_domain_index], class_label[domain_index_of_images_in_this_patch != self.target_domain_index])
-            else:
-                supervised_task_loss = criterion(class_predict_label, class_label)
+            supervised_task_loss = criterion(class_predict_label[rotation_label == 0], class_label[rotation_label == 0])
+
+            # elif self.target_domain_index:
+            #     supervised_task_loss = criterion(class_predict_label[domain_index_of_images_in_this_patch != self.target_domain_index], class_label[domain_index_of_images_in_this_patch != self.target_domain_index])
+            # else:
+            #     supervised_task_loss = criterion(class_predict_label, class_label)
             _, cls_pred = class_predict_label.max(dim=1)
             _, jig_pred = rotation_predict_label.max(dim=1)
             # _, domain_pred = domain_logit.max(dim=1)
