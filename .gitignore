@@ -1,5 +1,4 @@
-utils/model/pretrained/parameters/*
-utils/output_manager/output_file/*
+dl/model/pretrained/parameters/*
 *.ipynb
 */__pycache__/*
 .idea/*
