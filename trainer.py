@@ -101,9 +101,13 @@ class Trainer:
         self.number_of_images_classes = self.args.n_classes
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
+        self.cur_epoch = -1
+        self.log_freq = 30
+
 
     def _do_epoch(self):
         criterion = nn.CrossEntropyLoss()
+        p = OutputManager.print
         # Set the mode of the model to trainer, then the parameters can begin to be trained
         self.model.train()
 
@@ -124,19 +128,13 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
 
-            self.logger.log(
-                i,
-                len(self.train_data_loader),
-                {
-                    "jigsaw": unsupervised_task_loss.item(),
-                    "class": supervised_task_loss.item()
-                 },
-                {
-                    "jigsaw": torch.sum(jig_pred == rotation_label.data).item(),
-                    "class": torch.sum(cls_pred == class_label.data).item(),
-                 },
-                data.shape[0]
-            )
+            if i%self.log_freq == 0:
+                p([f'epoch:{self.cur_epoch}/{self.args.epochs};'+\
+                   f'bs:{data.shape[0]};{i}/{len(self.train_data_loader)}',
+                   f'train_acc:j:{torch.sum(jig_pred == rotation_label.data).item()/data.shape[0]};'+\
+                      f'c:{torch.sum(cls_pred == class_label.data).item()/data.shape[0]}',
+                   f'train_loss:j:{unsupervised_task_loss.item()};c:{supervised_task_loss.item()}'])
+
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
 
 
@@ -205,12 +203,11 @@ class Trainer:
         self.logger = Logger(self.args, update_frequency=30)  # , "domain", "lambda"
         self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
         for self.current_epoch in range(self.args.epochs):
+            self.cur_epoch += 1
             self.scheduler.step()
             lrs = self.scheduler.get_lr()
             self.logger.new_epoch(lrs)
-            print('--------------------------------------------------------')
-            print("current epoch:%d", self.current_epoch)
-            print("New epoch - lr: %s" % ", ".join([str(lr) for lr in lrs]))
+            p(f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])}')
             self._do_epoch()
         val_res = self.results["val"]
         test_res = self.results["test"]
@@ -263,12 +260,10 @@ def lazy_train(args, output_manager):
     temp.training_arguments = args
     temp.args = args
     data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
-
     optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all)
-    step_size = int(args.epochs * .8)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
     # scheduler = MyScheduler(temp, optimizer)
-    trainer = Trainer(temp.training_arguments, model, data_loader, optimizer, scheduler, output_manager)
+    trainer = Trainer(args, model, data_loader, optimizer, scheduler, output_manager)
     trainer.do_training()
 
 

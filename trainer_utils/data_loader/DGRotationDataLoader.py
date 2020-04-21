@@ -82,19 +82,7 @@ class DGRotationDataLoader:
 
         return train_data_loader, validation_data_loader, test_data_loader
 
-    # def _get_test_data_loader(self, my_training_arguments, is_patch_based_or_not=False):
-    #     args = my_training_arguments.training_arguments
-    #     names, labels = _dataset_info(join(dirname(__file__), 'txt_lists', '%s_test.txt' % args.target))
-    #     img_tr = get_val_transformer(args)
-    #     test_dataset_list = JigsawTestDataset(names, labels, patches=is_patch_based_or_not, img_transformer=img_tr, jig_classes=4)
-    #     if args.limit_target and len(test_dataset_list) > args.limit_target:
-    #         test_dataset_list = Subset(test_dataset_list, args.limit_target)
-    #         print("Using %d subset of val dataset" % args.limit_target)
-    #     test_dataset = ConcatDataset([test_dataset_list])
-    #
-    #     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4,
-    #                                          pin_memory=True, drop_last=False)
-    #     return test_data_loader
+
 
 
 
