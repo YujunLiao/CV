@@ -4,6 +4,7 @@ from tensorboardX import SummaryWriter
 from torch import optim
 import os
 
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -106,6 +107,10 @@ class Trainer:
 
 
     def _do_epoch(self):
+        self.cur_epoch += 1
+        self.scheduler.step()
+        lrs = self.scheduler.get_lr()
+
         criterion = nn.CrossEntropyLoss()
         p = OutputManager.print
         # Set the mode of the model to trainer, then the parameters can begin to be trained
@@ -127,9 +132,8 @@ class Trainer:
 
             loss.backward()
             self.optimizer.step()
-
             if i%self.log_freq == 0:
-                p([f'epoch:{self.cur_epoch}/{self.args.epochs};'+\
+                p([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};'+\
                    f'bs:{data.shape[0]};{i}/{len(self.train_data_loader)}',
                    f'train_acc:j:{torch.sum(jig_pred == rotation_label.data).item()/data.shape[0]};'+\
                       f'c:{torch.sum(cls_pred == class_label.data).item()/data.shape[0]}',
@@ -142,14 +146,9 @@ class Trainer:
         with torch.no_grad():
             for phase, loader in self.test_loaders.items():
                 total = len(loader.dataset)
-                if loader.dataset.isMulti():
-                    jigsaw_correct, class_correct, single_acc = self.do_test_multi(loader)
-                    print("Single vs multi: %g %g" % (float(single_acc) / total, float(class_correct) / total))
-                else:
-                    jigsaw_correct, class_correct = self.do_test(loader)
-                jigsaw_acc = float(jigsaw_correct) / total
+                _, class_correct = self.do_test(loader)
                 class_acc = float(class_correct) / total
-                self.logger.log_test(phase, {"jigsaw": jigsaw_acc, "class": class_acc})
+                p(f'{phase}_acc:c:{class_acc}')
                 self.results[phase][self.current_epoch] = class_acc
 
 
@@ -189,6 +188,7 @@ class Trainer:
         return jigsaw_correct, class_correct, single_correct
 
     def do_training(self):
+        start_time = time()
         p = OutputManager.print
         p('Start training')
         p({
@@ -196,18 +196,12 @@ class Trainer:
             'validation': self.validation_data_loader.dataset,
             'test': self.test_data_loader.dataset,
         })
-        # TODO(lyj):record
         p(vars(self.args))
 
         # TODO(lyj):
         self.logger = Logger(self.args, update_frequency=30)  # , "domain", "lambda"
         self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
         for self.current_epoch in range(self.args.epochs):
-            self.cur_epoch += 1
-            self.scheduler.step()
-            lrs = self.scheduler.get_lr()
-            self.logger.new_epoch(lrs)
-            p(f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])}')
             self._do_epoch()
         val_res = self.results["val"]
         test_res = self.results["test"]
@@ -227,7 +221,7 @@ class Trainer:
         }
         p(temp_dict)
 
-        self.logger.save_best(test_res[idx_best], test_res.max())
+
 
         self.output_manager.write_to_output_file([
             '--------------------------------------------------------',
@@ -242,7 +236,7 @@ class Trainer:
             "Highest accuracy on test set appears on epoch " + str(test_res.argmax().data),
             str("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best]),
             str("Highest accuracy on test set:%.3f" % test_res.max()),
-            str("It took %g" % (time() - self.logger.start_time))
+            str("It took %g" % (time() - start_time))
         ])
 
         return self.logger, self.model
