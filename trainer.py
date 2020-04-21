@@ -1,7 +1,7 @@
 
 import sys
 from tensorboardX import SummaryWriter
-
+from torch import optim
 import os
 
 import torch
@@ -15,7 +15,7 @@ from trainer_utils.model.MyModel import MyModel, get_model
 
 from trainer_utils.logger.Logger import Logger
 from trainer_utils.data_loader.DGRotationDataLoader import DGRotationDataLoader
-from trainer_utils.optimizer.MyOptimizer import MyOptimizer
+from trainer_utils.optimizer.MyOptimizer import MyOptimizer, get_optimizer
 from trainer_utils.scheduler.MyScheduler import MyScheduler
 from trainer_utils.output_manager.OutputManager import OutputManager
 from trainer_utils.lazy_man.LazyMan import LazyMan, LazyMan2
@@ -83,19 +83,19 @@ def get_args():
 
 
 class Trainer:
-    def __init__(self, args, my_model, my_data_loader, my_optimizer, my_scheduler, output_manager, ):
+    def __init__(self, args, model, data_loader, optimizer, scheduler, output_manager):
         # self.args = args.args
         self.args = args
         self.device = args.device
-        self.model = my_model.to(args.device)
+        self.model = model.to(args.device)
         self.output_manager=output_manager
 
-        self.train_data_loader = my_data_loader.train_data_loader
-        self.validation_data_loader = my_data_loader.validation_data_loader
-        self.test_data_loader = my_data_loader.test_data_loader
+        self.train_data_loader = data_loader.train_data_loader
+        self.validation_data_loader = data_loader.validation_data_loader
+        self.test_data_loader = data_loader.test_data_loader
 
-        self.optimizer = my_optimizer.optimizer
-        self.scheduler = my_scheduler.scheduler
+        self.optimizer = optimizer
+        self.scheduler = scheduler
 
         self.classify_only_ordered_images_or_not = self.args.classify_only_ordered_images_or_not
         self.number_of_images_classes = self.args.n_classes
@@ -263,8 +263,11 @@ def lazy_train(args, output_manager):
     temp.training_arguments = args
     temp.args = args
     data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
-    optimizer = MyOptimizer(model, lr=args.learning_rate, train_all=args.train_all)
-    scheduler = MyScheduler(temp, optimizer)
+
+    optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all)
+    step_size = int(args.epochs * .8)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size)
+    # scheduler = MyScheduler(temp, optimizer)
     trainer = Trainer(temp.training_arguments, model, data_loader, optimizer, scheduler, output_manager)
     trainer.do_training()
 
