@@ -8,26 +8,31 @@ from random import random
 import torch
 import bisect
 import warnings
-from utils.data_loader.dataset.Dataset import MyDataset
+from dl.data_loader.dataset.Dataset import MyDataset, get_dataset
 from torch.utils.data import Dataset
 
 
 class DARotationDataset():
     def __init__(self, my_training_arguments, is_patch_based_or_not):
-        my_dataset = MyDataset(my_training_arguments, is_patch_based_or_not)
-        training_arguments = my_training_arguments.args
-        max_number_of_train_dataset = training_arguments.limit_source
-        max_number_of_test_dataset = training_arguments.limit_target
-        img_transformer, tile_transformer = self._get_train_transformers(training_arguments)
-        val_transformer = self._get_val_transformer(training_arguments)
+        args = my_training_arguments.args
+        # my_dataset = MyDataset(my_training_arguments, is_patch_based_or_not)
+        train_paths, train_labels, val_paths, val_labels, test_paths, test_labels = \
+        get_dataset(args.source, args.target, val_size=args.val_size)
+
+        max_number_of_train_dataset = args.limit_source
+        max_number_of_test_dataset = args.limit_target
+        img_transformer, tile_transformer = self._get_train_transformers(args)
+        val_transformer = self._get_val_transformer(args)
 
         train_dataset = RotationTrainDataset(
-            my_dataset.train_dataset['train_data_paths'],
-            my_dataset.train_dataset['train_labels'],
+            train_paths,
+            train_labels,
+            # my_dataset.train_dataset['train_data_paths'],
+            # my_dataset.train_dataset['train_labels'],
             is_patch_based_or_not=is_patch_based_or_not,
             img_transformer=img_transformer,
             tile_transformer=tile_transformer,
-            percent_of_original_image=training_arguments.bias_whole_image
+            percent_of_original_image=args.bias_whole_image
         )
 
         if max_number_of_train_dataset:
@@ -38,8 +43,10 @@ class DARotationDataset():
 
 
         validation_dataset = RotationTestDataset(
-            my_dataset.validation_dataset['validation_data_paths'],
-            my_dataset.validation_dataset['validation_labels'],
+            val_paths,
+            val_labels,
+            # my_dataset.validation_dataset['validation_data_paths'],
+            # my_dataset.validation_dataset['validation_labels'],
             img_transformer=val_transformer,
             is_patch_based_or_not=is_patch_based_or_not,
 
@@ -50,8 +57,10 @@ class DARotationDataset():
 
 
         test_dataset = RotationTestDataset(
-            my_dataset.test_dataset['test_data_paths'],
-            my_dataset.test_dataset['test_labels'],
+            test_paths,
+            test_labels,
+            # my_dataset.test_dataset['test_data_paths'],
+            # my_dataset.test_dataset['test_labels'],
             is_patch_based_or_not=is_patch_based_or_not,
             img_transformer=val_transformer,
             )

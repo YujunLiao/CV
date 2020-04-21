@@ -1,8 +1,8 @@
 import argparse
 # from trainer_utils.data_loader.dataset.PDataset import available_domains
 import pprint
+import test2
 
-from trainer_utils.model.MyModel import model_fns
 
 i ='sadfasd'
 
@@ -23,4 +23,11 @@ pprint.pprint(
     }
 )
 
+def hh():
+    return [1,2]
 
+x,y = hh()
+print(x)
+print(y)
+print(__file__)
+test2.hh()

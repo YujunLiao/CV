@@ -11,15 +11,15 @@ from torch.nn import functional as F
 from time import time, strftime, localtime
 import argparse
 # from utils.model.MyModel import MyModel
-from utils.model.MyModel import MyModel, get_model
+from dl.model.MyModel import MyModel, get_model
 
 
 from utils.logger.Logger import Logger
-from utils.data_loader.DGRotationDataLoader import DGRotationDataLoader
-from utils.optimizer.MyOptimizer import  get_optimizer
+from dl.data_loader.DGRotationDataLoader import DGRotationDataLoader
+from dl.optimizer import  get_optimizer
 
-from utils.output_manager.collector import Collector
-from utils.lazy_man.LazyMan import LazyMan, LazyMan2
+from dl.utils.collector import Collector
+from dl.utils.LazyMan import LazyMan, LazyMan2
 import socket
 
 

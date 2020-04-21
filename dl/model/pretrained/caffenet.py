@@ -5,7 +5,7 @@ from itertools import chain
 import torch
 from torch import nn as nn
 
-from utils.model.pretrained.alexnet import Id
+from dl.model.pretrained.alexnet import Id
 
 
 class AlexNetCaffe(nn.Module):

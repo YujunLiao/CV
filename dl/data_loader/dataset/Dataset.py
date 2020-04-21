@@ -40,6 +40,39 @@ dataset_mean = {mnist: (0.13909429, 0.13909429, 0.13909429),
                 usps: (0.17025368, 0.17025368, 0.17025368),
                 }
 
+def split(list_1, list_2, proportion=None):
+    """
+
+    :param list_1: list of images paths
+    :param list_2:  list of labels
+    :param proportion: 0 < float < 1
+    :return:
+    """
+    if proportion == None:
+        return list_1, list_2
+    n = len(list_1)
+    # indices is a list of index of (n * percent) samples from original data list.
+    indices = sample(range(n), int(n * proportion))
+    list_1_1 = [list_1[k] for k in indices]
+    list_1_2 = [v for k, v in enumerate(list_1) if k not in indices]
+    list_2_1 = [list_2[k] for k in indices]
+    list_2_2 = [v for k, v in enumerate(list_2) if k not in indices]
+    return [list_1_2, list_1_1, list_2_2, list_2_1]
+
+def paths_and_labels_from(files):
+    if isinstance(files, str):
+        files = [files]
+    paths = []
+    labels = []
+    for file in files:
+        with open(file, 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            line = line.split(' ')
+            paths.append(line[0])
+            labels.append(int(line[1]))
+    return [paths, labels]
+
 
 
 class MyDataset:
@@ -80,11 +113,11 @@ class MyDataset:
 
             # path_of_txt_list_of_data refer to where are the txt files that record all images' path, for example,
             # /home/lyj/Files/project/pycharm/DG_rotation/trainer_utils/data_loader/txt_lists/photo_train.txt
-            path_of_txt_list = join(dirname(__file__), 'txt_lists', '%s_train.txt' % domain_name)
-            data_paths, labels = self._get_data_paths_and_labels_from_txt_list(path_of_txt_list)
+            path = join(dirname(__file__), 'txt_lists', '%s_train.txt' % domain_name)
+            data_paths, labels = self.paths_and_labels_from(path)
             # training_arguments.val_size refer to the percent of validation dataset, for example,
             # val_size=0.1 means 10% data is used for validation, 90% data is used for training.
-            train_data_paths, validation_data_paths, train_labels, validation_labels = self._split_dataset_randomly(
+            train_data_paths, validation_data_paths, train_labels, validation_labels = self.split(
                 data_paths,
                 labels,
                 training_arguments.val_size
@@ -150,63 +183,43 @@ class MyDataset:
     def _get_test_dataset(self, my_training_arguments, is_patch_based_or_not):
         training_arguments = my_training_arguments.args
 
-
-        # path_of_txt_list_of_data refer to where are the txt files that record all images' path, for example,
-        # /home/lyj/Files/project/pycharm/DG_rotation/trainer_utils/data_loader/txt_lists/photo_train.txt
         path_of_txt_list = join(dirname(__file__), 'txt_lists', '%s_test.txt' % training_arguments.target)
-        data_paths, labels = self._get_data_paths_and_labels_from_txt_list(path_of_txt_list)
-
-        # img_tr = get_val_transformer(training_arguments)
-        # test_dataset = JigsawTestDataset(
-        #     data_paths,
-        #     labels,
-        #     is_patch_based_or_not=is_patch_based_or_not,
-        #     img_transformer=img_tr,
-        #     jig_classes=4)
-
-        # test_dataset = RotationTestDataset(
-        #     data_paths,
-        #     labels,
-        #     is_patch_based_or_not=is_patch_based_or_not,
-        #     img_transformer=img_tr,
-        #     )
-        #
-        # if max_number_of_test_dataset and len(test_dataset) > max_number_of_test_dataset:
-        #     test_dataset = Subset(test_dataset, max_number_of_test_dataset)
-        #
-        #     print("Using %d subset of val dataset" % training_arguments.limit_target)
-        # test_dataset_list = [test_dataset]
-        # return ConcatDataset(test_dataset_list)
+        data_paths, labels = self.paths_and_labels_from(path_of_txt_list)
         return {'test_data_paths':data_paths, 'test_labels':labels}
 
-    def _get_data_paths_and_labels_from_txt_list(self, txt_labels):
-        with open(txt_labels, 'r') as f:
-            lines = f.readlines()
 
-        data_paths = []
-        labels = []
-        for line in lines:
-            line = line.split(' ')
-            data_paths.append(line[0])
-            labels.append(int(line[1]))
+def get_dataset(source_domains, target_domain,
+                dir=f'{dirname(__file__)}/txt_lists/', val_size = 0.1):
+    assert isinstance(source_domains, list)
+    assert isinstance(target_domain, str)
 
-        return data_paths, labels
+    train_paths = []
+    val_paths = []
+    train_labels = []
+    val_labels = []
 
-    def _split_dataset_randomly(self, data_paths, labels, percent):
-        """
+    for domain in source_domains:
+        paths, labels = paths_and_labels_from(f'{dir}/train/{domain}')
+        # training_arguments.val_size refer to the percent of validation dataset, for example,
+        # val_size=0.1 means 10% data is used for validation, 90% data is used for training.
+        paths_1, paths_2, labels_1, labels_2 = split(
+            paths,
+            labels,
+            val_size)
+        train_paths += paths_1
+        val_paths += paths_2
+        train_labels += labels_1
+        val_labels += labels_2
 
-        :param data_paths: list of images paths
-        :param labels:  list of labels
-        :param percent: 0 < float < 1
-        :return:
-        """
-        number_of_data = len(data_paths)
-        # random_indexes is a list of index of (number_of_data * percent) samples from original data list.
-        random_indexes = sample(range(number_of_data), int(number_of_data * percent))
-        validation_data_paths = [data_paths[k] for k in random_indexes]
-        train_data_paths = [v for k, v in enumerate(data_paths) if k not in random_indexes]
-        validation_labels = [labels[k] for k in random_indexes]
-        train_labels = [v for k, v in enumerate(labels) if k not in random_indexes]
-        return train_data_paths, validation_data_paths, train_labels, validation_labels
+    test_paths, test_labels = paths_and_labels_from(f'{dir}/train/{target_domain}')
+
+    return train_paths, train_labels, val_paths, val_labels, test_paths, test_labels
+
+
+
+
+
+
+
 
 
