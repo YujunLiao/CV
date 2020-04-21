@@ -254,14 +254,16 @@ class Container:
     def __init__(self):
         pass
 
-def lazy_train(my_training_arguments, output_manager):
-    model = get_model(my_training_arguments)
+def lazy_train(args, output_manager):
+    model = get_model(args.network,
+                      jigsaw_classes=args.number_of_unsupervised_classes,
+                      classes=args.n_classes)
     is_patch_based_or_not = model.is_patch_based()
     temp = Container()
-    temp.training_arguments = my_training_arguments
-    temp.args = my_training_arguments
+    temp.training_arguments = args
+    temp.args = args
     data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
-    optimizer = MyOptimizer(temp, model)
+    optimizer = MyOptimizer(model, lr=args.learning_rate, train_all=args.train_all)
     scheduler = MyScheduler(temp, optimizer)
     trainer = Trainer(temp.training_arguments, model, data_loader, optimizer, scheduler, output_manager)
     trainer.do_training()

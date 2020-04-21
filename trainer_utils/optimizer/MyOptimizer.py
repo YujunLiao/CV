@@ -7,15 +7,15 @@ class MyOptimizer:
         optimizer
 
     """
-    def __init__(self, my_training_arguments, my_model):
-        if my_training_arguments.args.train_all:
-            model_parameters = my_model.parameters()
+    def __init__(self,model, lr=0.001, train_all=True, nesterov=False):
+        if train_all:
+            model_parameters = model.parameters()
         else:
-            model_parameters = my_model.get_params(my_training_arguments.args.learning_rate)
+            model_parameters = model.get_params(lr)
         self.optimizer = optim.SGD(
             model_parameters,
             weight_decay=.0005,
             momentum=.9,
-            nesterov=my_training_arguments.args.nesterov,
-            lr=my_training_arguments.args.learning_rate
+            nesterov=nesterov,
+            lr=lr
         )

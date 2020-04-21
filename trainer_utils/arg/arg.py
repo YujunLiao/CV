@@ -1,6 +1,6 @@
 import argparse
 from trainer_utils.data_loader.dataset.PDataset import available_domains
-from trainer_utils.model.MyModel import model_dictionary
+from trainer_utils.model.MyModel import model_fns
 
 
 
@@ -38,7 +38,7 @@ class DGRotationTrainingArgument(argparse.ArgumentParser):
         :return:
         """
         # Arguments for training
-        self.add_argument("--network", choices=model_dictionary.keys(), help="Which network to use")
+        self.add_argument("--network", choices=model_fns.keys(), help="Which network to use")
         self.add_argument("--source", choices=available_domains, help="Source", nargs='+')
         self.add_argument("--target", choices=available_domains, help="Target")
         self.add_argument("--n_classes", "-c", type=int, help="Number of classes")

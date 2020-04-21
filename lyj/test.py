@@ -2,7 +2,7 @@ import argparse
 # from trainer_utils.data_loader.dataset.PDataset import available_domains
 import pprint
 
-from trainer_utils.model.MyModel import model_dictionary
+from trainer_utils.model.MyModel import model_fns
 
 i ='sadfasd'
 
