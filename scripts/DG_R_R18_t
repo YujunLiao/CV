@@ -12,7 +12,7 @@
 CUDA_VISIBLE_DEVICES=$1 \
 /home/giorgio/Files/pycharm_project/pytorch_interpreter/bin/python3.7 -u \
 /home/giorgio/Files/pycharm_project/CV/trainer.py \
---redirect_output null \
+--redirect_to_file null \
 --parameters_lists 0.5,1.0  \
 --domains_list art_painting cartoon sketch photo \
 --target_domain_list art_painting cartoon sketch photo    \

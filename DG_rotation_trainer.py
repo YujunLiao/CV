@@ -21,7 +21,7 @@ from trainer_utils.training_argument.DGRotationTrainingArgument import DGRotatio
 from trainer_utils.data_loader.DGRotationDataLoader import DGRotationDataLoader
 from trainer_utils.optimizer.MyOptimizer import MyOptimizer
 from trainer_utils.scheduler.MyScheduler import MyScheduler
-from trainer_utils.output_manager.OutputManager import OutputManager
+from trainer_utils.output_manager.collector import Collector
 from trainer_utils.lazy_man.LazyMan import LazyMan, LazyMan2
 import socket
 
@@ -187,7 +187,7 @@ class DGRotationTrainer:
         print("Highest accuracy on test set:%.3f" % test_res.max())
         self.logger.save_best(test_res[idx_best], test_res.max())
 
-        self.output_manager.write_to_output_file([
+        self.output_manager.add([
             '--------------------------------------------------------',
             str(strftime("%Y-%m-%d %H:%M:%S", localtime())),
             self.training_arguments.source,
@@ -256,9 +256,9 @@ if __name__ == "__main__":
             my_training_arguments.args.source=source_and_target_domain['source_domain']
             my_training_arguments.args.target=source_and_target_domain['target_domain']
 
-            output_manager = OutputManager(
-                output_file_path=output_file_path,
-                output_file_name=my_training_arguments.args.source[0] + '_' + my_training_arguments.args.target
+            output_manager = Collector(
+                output_dir=output_file_path,
+                file=my_training_arguments.args.source[0] + '_' + my_training_arguments.args.target
 
             )
             for i in range(int(my_training_arguments.args.repeat_times)):

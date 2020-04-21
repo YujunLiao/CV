@@ -10,17 +10,33 @@ from torch import nn
 from torch.nn import functional as F
 from time import time, strftime, localtime
 import argparse
-# from trainer_utils.model.MyModel import MyModel
-from trainer_utils.model.MyModel import MyModel, get_model
+# from utils.model.MyModel import MyModel
+from utils.model.MyModel import MyModel, get_model
 
 
-from trainer_utils.logger.Logger import Logger
-from trainer_utils.data_loader.DGRotationDataLoader import DGRotationDataLoader
-from trainer_utils.optimizer.MyOptimizer import MyOptimizer, get_optimizer
-from trainer_utils.scheduler.MyScheduler import MyScheduler
-from trainer_utils.output_manager.OutputManager import OutputManager
-from trainer_utils.lazy_man.LazyMan import LazyMan, LazyMan2
+from utils.logger.Logger import Logger
+from utils.data_loader.DGRotationDataLoader import DGRotationDataLoader
+from utils.optimizer.MyOptimizer import  get_optimizer
+
+from utils.output_manager.collector import Collector
+from utils.lazy_man.LazyMan import LazyMan, LazyMan2
 import socket
+
+
+
+def pp(data):
+    print('----------------------------------------------')
+    if isinstance(data, str):
+        print(data)
+    if isinstance(data, list):
+        for _ in data:
+            print(_)
+    if isinstance(data, dict):
+        for _ in data.items():
+            if isinstance(_[1], torch.utils.data.Dataset):
+                print(_[0], len(_[1]))
+            else:
+                print(_[0], _[1])
 
 
 def get_args():
@@ -49,9 +65,9 @@ def get_args():
 
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
-    parser.add_argument("--log_dir",
-                        default='./output_folder/')
-    parser.add_argument("--redirect_output", default=None)
+    parser.add_argument("--output_dir",
+                        default='./output/')
+    parser.add_argument("--redirect_to_file", default=None)
     parser.add_argument("--experiment", default='DG_rot')
 
     parser.add_argument("--classify_only_ordered_images_or_not", type=bool)
@@ -92,14 +108,62 @@ class Trainer:
         self.cur_epoch = -1
         self.log_freq = 30
 
-        self.do_training()
+        self.train()
+
+    def train(self):
+        start_time = time()
+        pp('Start training')
+        pp({
+            'train':self.train_data_loader.dataset,
+            'validation': self.validation_data_loader.dataset,
+            'test': self.test_data_loader.dataset,
+        })
+        pp(vars(self.args))
+
+        # TODO(lyj):
+        self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
+        for self.current_epoch in range(self.args.epochs):
+            self.train_epoch()
+        val_res = self.results["val"]
+        test_res = self.results["test"]
+        idx_best = val_res.argmax()
+
+        # print("Best val %g, corresponding test %g - best test: %g" % (val_res.max(), test_res[idx_best], test_res.max()))
+        pp(strftime("%Y-%m-%d %H:%M:%S", localtime()))
+        temp_dict = {
+            'source': self.args.source,
+            'target':self.args.target,
+            'param':self.args.parameters_lists,
+            'Highest accuracy on validation set appears on epoch': val_res.argmax().data,
+            'Highest accuracy on test set appears on epoch ': test_res.argmax().data,
+            'Accuracy on test set when the accuracy on validation set is highest:%.3f': test_res[idx_best],
+            'Highest accuracy on test set:%.3f': test_res.max(),
+
+        }
+        pp(temp_dict)
 
 
-    def _do_epoch(self):
+
+        self.output_manager.add([
+            '--------------------------------------------------------',
+            str(strftime("%Y-%m-%d %H:%M:%S", localtime())),
+            self.args.source,
+            "target domain:" + self.args.target,
+            "jigweight:" + str(self.args.unsupervised_task_weight),
+            "bias_hole_image:" + str(self.args.bias_whole_image),
+            "only_classify the ordered image:" + str(self.args.classify_only_ordered_images_or_not),
+            "batch_size:" + str(self.args.batch_size) + " learning_rate:" + str(self.args.learning_rate),
+            "Highest accuracy on validation set appears on epoch " + str(val_res.argmax().data),
+            "Highest accuracy on test set appears on epoch " + str(test_res.argmax().data),
+            str("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best]),
+            str("Highest accuracy on test set:%.3f" % test_res.max()),
+            str("It took %g" % (time() - start_time))
+        ])
+
+    def train_epoch(self):
         self.cur_epoch += 1
         self.scheduler.step()
         lrs = self.scheduler.get_lr()
-        p = OutputManager.print
         criterion = nn.CrossEntropyLoss()
 
         # Set the mode of the model to trainer, then the parameters can begin to be trained
@@ -121,7 +185,7 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
             if i%self.log_freq == 0:
-                p([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};'+\
+                pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};'+\
                    f'bs:{data.shape[0]};{i}/{len(self.train_data_loader)}',
                    f'train_acc:j:{torch.sum(jig_pred == rotation_label.data).item()/data.shape[0]};'+\
                       f'c:{torch.sum(cls_pred == class_label.data).item()/data.shape[0]}',
@@ -136,7 +200,7 @@ class Trainer:
                 total = len(loader.dataset)
                 class_correct = Trainer.eval(self.model, loader, device=self.device)
                 class_acc = float(class_correct) / total
-                p(f'{phase}_acc:c:{class_acc}')
+                pp(f'{phase}_acc:c:{class_acc}')
                 self.results[phase][self.current_epoch] = class_acc
 
     @staticmethod
@@ -148,58 +212,6 @@ class Trainer:
             _, cls_pred = class_logit.max(dim=1)
             class_correct += torch.sum(cls_pred == class_l.data)
         return class_correct
-
-
-    def do_training(self):
-        start_time = time()
-        p = OutputManager.print
-        p('Start training')
-        p({
-            'train':self.train_data_loader.dataset,
-            'validation': self.validation_data_loader.dataset,
-            'test': self.test_data_loader.dataset,
-        })
-        p(vars(self.args))
-
-        # TODO(lyj):
-        self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
-        for self.current_epoch in range(self.args.epochs):
-            self._do_epoch()
-        val_res = self.results["val"]
-        test_res = self.results["test"]
-        idx_best = val_res.argmax()
-
-        # print("Best val %g, corresponding test %g - best test: %g" % (val_res.max(), test_res[idx_best], test_res.max()))
-        p(strftime("%Y-%m-%d %H:%M:%S", localtime()))
-        temp_dict = {
-            'source': self.args.source,
-            'target':self.args.target,
-            'param':self.args.parameters_lists,
-            'Highest accuracy on validation set appears on epoch': val_res.argmax().data,
-            'Highest accuracy on test set appears on epoch ': test_res.argmax().data,
-            'Accuracy on test set when the accuracy on validation set is highest:%.3f': test_res[idx_best],
-            'Highest accuracy on test set:%.3f': test_res.max(),
-
-        }
-        p(temp_dict)
-
-
-
-        self.output_manager.write_to_output_file([
-            '--------------------------------------------------------',
-            str(strftime("%Y-%m-%d %H:%M:%S", localtime())),
-            self.args.source,
-            "target domain:" + self.args.target,
-            "jigweight:" + str(self.args.unsupervised_task_weight),
-            "bias_hole_image:" + str(self.args.bias_whole_image),
-            "only_classify the ordered image:" + str(self.args.classify_only_ordered_images_or_not),
-            "batch_size:" + str(self.args.batch_size) + " learning_rate:" + str(self.args.learning_rate),
-            "Highest accuracy on validation set appears on epoch " + str(val_res.argmax().data),
-            "Highest accuracy on test set appears on epoch " + str(test_res.argmax().data),
-            str("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best]),
-            str("Highest accuracy on test set:%.3f" % test_res.max()),
-            str("It took %g" % (time() - start_time))
-        ])
 
 
 
@@ -233,16 +245,14 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
     args = get_args()
     for args in iterate_args(args):
-        output_dir = f'{args.log_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/' + \
+        output_dir = f'{args.output_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/' + \
         '_'.join([str(_) for _ in args.params])
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        if args.redirect_output and args.redirect_output != 'null':
-            sys.stdout = open(output_dir+args.redirect_output, 'a')
-        output_manager = OutputManager(
-            output_file_path=output_dir,
-            output_file_name=args.source[0] + '_' + args.target
+        collector = Collector(
+            output_dir=output_dir,
+            file=f'{args.source[0]}_{args.target}'
         )
+        if args.redirect_to_file and args.redirect_to_file != 'null':
+            sys.stdout = open(output_dir+args.redirect_output, 'a')
 
         model = get_model(args.network,
                           jigsaw_classes=args.number_of_unsupervised_classes,
@@ -254,7 +264,7 @@ if __name__ == "__main__":
         data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
-        Trainer(args, model, data_loader, optimizer, scheduler, output_manager)
+        Trainer(args, model, data_loader, optimizer, scheduler, collector)
 
 
 
