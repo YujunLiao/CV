@@ -101,12 +101,6 @@ class Trainer:
         self.number_of_images_classes = self.args.n_classes
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
-        # if self.args.target in self.args.source:
-        #     self.target_domain_index = self.args.source.index(self.args.target)
-        #     print("Target in source: %d" % self.target_domain_index)
-        #     print(self.args.source)
-        # else:
-        #     self.target_domain_index = None
 
     def _do_epoch(self):
         criterion = nn.CrossEntropyLoss()
@@ -120,24 +114,8 @@ class Trainer:
 
             rotation_predict_label, class_predict_label = self.model(data)  # , lambda_val=lambda_val)
             unsupervised_task_loss = criterion(rotation_predict_label, rotation_label)
-
-            # if self.args.classify_only_ordered_images_or_not:
-            #     if self.target_domain_index is not None:
-            #         # images_should_be_selected_or_not is a 128*1 list containing True or False.
-            #         images_should_be_selected_or_not = (rotation_label == 0) & (domain_index_of_images_in_this_patch != self.target_domain_index)
-            #         supervised_task_loss = criterion(
-            #             class_predict_label[images_should_be_selected_or_not],
-            #             class_label[images_should_be_selected_or_not]
-            #         )
-            #     else:
-            #         supervised_task_loss = criterion(class_predict_label[rotation_label == 0], class_label[rotation_label == 0])
-
             supervised_task_loss = criterion(class_predict_label[rotation_label == 0], class_label[rotation_label == 0])
 
-            # elif self.target_domain_index:
-            #     supervised_task_loss = criterion(class_predict_label[domain_index_of_images_in_this_patch != self.target_domain_index], class_label[domain_index_of_images_in_this_patch != self.target_domain_index])
-            # else:
-            #     supervised_task_loss = criterion(class_predict_label, class_label)
             _, cls_pred = class_predict_label.max(dim=1)
             _, jig_pred = rotation_predict_label.max(dim=1)
             # _, domain_pred = domain_logit.max(dim=1)
@@ -160,6 +138,8 @@ class Trainer:
                 data.shape[0]
             )
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
+
+
         self.model.eval()
         with torch.no_grad():
             for phase, loader in self.test_loaders.items():
@@ -211,12 +191,15 @@ class Trainer:
         return jigsaw_correct, class_correct, single_correct
 
     def do_training(self):
-        print('******************Start training**************************************')
-        print('--------------------------------------------------------')
-        print("Dataset size: trainer %d, val %d, test %d" % (len(self.train_data_loader.dataset), len(self.validation_data_loader.dataset), len(self.test_data_loader.dataset)))
-        print('--------------------------------------------------------')
-        print(self.args)
-        print('--------------------------------------------------------')
+        p = OutputManager.print
+        p('Start training')
+        p({
+            'train':self.train_data_loader.dataset,
+            'validation': self.validation_data_loader.dataset,
+            'test': self.test_data_loader.dataset,
+        })
+        # TODO(lyj):record
+        p(vars(self.args))
 
         # TODO(lyj):
         self.logger = Logger(self.args, update_frequency=30)  # , "domain", "lambda"
@@ -234,17 +217,19 @@ class Trainer:
         idx_best = val_res.argmax()
 
         # print("Best val %g, corresponding test %g - best test: %g" % (val_res.max(), test_res[idx_best], test_res.max()))
-        print(strftime("%Y-%m-%d %H:%M:%S", localtime()))
-        print(self.args.target)
-        print(self.args.source)
-        print("unsupervised_task_weight:", self.args.unsupervised_task_weight)
-        # TODO(change bias whole image)
-        print("bias_hole_image:", self.args.bias_whole_image)
-        print("only_classify the ordered image:", self.args.classify_only_ordered_images_or_not)
-        print("Highest accuracy on validation set appears on epoch ", val_res.argmax().data)
-        print("Highest accuracy on test set appears on epoch ", test_res.argmax().data)
-        print("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best])
-        print("Highest accuracy on test set:%.3f" % test_res.max())
+        p(strftime("%Y-%m-%d %H:%M:%S", localtime()))
+        temp_dict = {
+            'source': self.args.source,
+            'target':self.args.target,
+            'param':self.args.parameters_lists,
+            'Highest accuracy on validation set appears on epoch': val_res.argmax().data,
+            'Highest accuracy on test set appears on epoch ': test_res.argmax().data,
+            'Accuracy on test set when the accuracy on validation set is highest:%.3f': test_res[idx_best],
+            'Highest accuracy on test set:%.3f': test_res.max(),
+
+        }
+        p(temp_dict)
+
         self.logger.save_best(test_res[idx_best], test_res.max())
 
         self.output_manager.write_to_output_file([
@@ -278,7 +263,6 @@ def lazy_train(my_training_arguments, output_manager):
     data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
     optimizer = MyOptimizer(temp, model)
     scheduler = MyScheduler(temp, optimizer)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(temp.training_arguments, model, data_loader, optimizer, scheduler, output_manager)
     trainer.do_training()
 
@@ -319,7 +303,7 @@ if __name__ == "__main__":
         for source_and_target_domain in lazy_man.source_and_target_domain_permutation_list:
             args.source=source_and_target_domain['source_domain']
             args.target=source_and_target_domain['target_domain']
-
+            #
             output_manager = OutputManager(
                 output_file_path=output_file_path,
                 output_file_name=args.source[0] + '_' + args.target
