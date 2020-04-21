@@ -12,18 +12,19 @@
 CUDA_VISIBLE_DEVICES=$1 \
 /home/giorgio/Files/pycharm_project/pytorch_interpreter/bin/python3.7 -u \
 /home/giorgio/Files/pycharm_project/CV/trainer.py \
---redirect_to_file 0 \
+--redirect_output null \
 --parameters_lists 0.5,1.0  \
 --domains_list art_painting cartoon sketch photo \
 --target_domain_list art_painting cartoon sketch photo    \
 --n_classes 7 \
 --repeat_times 1 \
 --network resnet18  --epochs 2 \
---classify_only_ordered_images_or_not True  --TTA False --nesterov False \
+--classify_only_ordered_images_or_not True    \
 --batch_size 128  --image_size 222 \
 --learning_rate 0.001 --val_size 0.1  \
---train_all True --folder_name test  \
+--train_all True   \
 --min_scale 0.8 --max_scale 1.0 --random_horiz_flip 0 --jitter 0 --tile_random_grayscale 0.1 \
+# --nesterov False
 #--unsupervised_task_weight 0.8  --bias_whole_image 0.3 \
 
 
