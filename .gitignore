@@ -1,6 +1,5 @@
-dl/model/pretrained/parameters/*
+dl/model/pretrained/parameters/
 *.ipynb
-*/__pycache__/*
+*.pyc
 .idea/*
-logs/*
 dl/data/data/
