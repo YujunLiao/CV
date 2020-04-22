@@ -8,16 +8,16 @@ from random import random
 import torch
 import bisect
 import warnings
-from dl.data_loader.dataset.Dataset import MyDataset, get_dataset
+
 from torch.utils.data import Dataset
+from dl.data.utils import get_data
 
 
 class DARotationDataset():
     def __init__(self, my_training_arguments, is_patch_based_or_not):
         args = my_training_arguments.args
-        # my_dataset = MyDataset(my_training_arguments, is_patch_based_or_not)
         train_paths, train_labels, val_paths, val_labels, test_paths, test_labels = \
-        get_dataset(args.source, args.target, val_size=args.val_size)
+        get_data(args.source, args.target, val_size=args.val_size)
 
         max_number_of_train_dataset = args.limit_source
         max_number_of_test_dataset = args.limit_target

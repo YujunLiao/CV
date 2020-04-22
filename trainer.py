@@ -15,7 +15,7 @@ from dl.model.MyModel import MyModel, get_model
 
 
 from utils.logger.Logger import Logger
-from dl.data_loader.DGRotationDataLoader import DGRotationDataLoader
+from dl.data.data_loader.DGRotationDataLoader import DGRotationDataLoader
 from dl.optimizer import  get_optimizer
 
 from dl.utils.collector import Collector
