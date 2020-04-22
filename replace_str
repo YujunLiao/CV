@@ -1,0 +1,13 @@
+# /home/giorgio/Files/pycharm_project/fmc/data/PACS/kfold/art_painting/dog/pic_001.jpg 0
+#/home/lyj/Files/project/pycharm/CV/dl/data/data/PACS/kfold/art_painting/dog/pic_001.jpg 0
+
+
+for i in /home/lyj/Files/project/pycharm/CV/dl/data/data/test/*
+do
+  sed -i "s@/home/giorgio/Files/pycharm_project/fmc/data/@/home/lyj/Files/project/pycharm/CV/dl/data/data/@g" $i
+done
+
+for i in /home/lyj/Files/project/pycharm/CV/dl/data/data/train/*
+do
+  sed -i "s@/home/giorgio/Files/pycharm_project/fmc/data/@/home/lyj/Files/project/pycharm/CV/dl/data/data/@g" $i
+done

@@ -1,2 +1,2 @@
-def hh():
-    print(__file__)
+print(__file__)
+print()

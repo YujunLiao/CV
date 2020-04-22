@@ -3,7 +3,7 @@ import sys
 from tensorboardX import SummaryWriter
 from torch import optim
 import os
-
+from os.path import dirname
 
 import torch
 from torch import nn
@@ -65,8 +65,9 @@ def get_args():
 
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
-    parser.add_argument("--output_dir",
-                        default='./output/')
+    parser.add_argument("--data_dir",
+                        default=f'{dirname(__file__)}/dl/data/data/')
+    parser.add_argument("--output_dir", default='./output/')
     parser.add_argument("--redirect_to_file", default=None)
     parser.add_argument("--experiment", default='DG_rot')
 

@@ -3,3 +3,4 @@ dl/model/pretrained/parameters/*
 */__pycache__/*
 .idea/*
 logs/*
+dl/data/data/
