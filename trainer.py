@@ -15,7 +15,7 @@ from dl.model.MyModel import MyModel, get_model
 
 
 from utils.logger.Logger import Logger
-from dl.data.data_loader.DGRotationDataLoader import DGRotationDataLoader
+from dl.data.data_loader.DGRotationDataLoader import DGRotationDataLoader, get_DG_data_loader
 from dl.optimizer import  get_optimizer
 
 from dl.utils.collector import Collector
@@ -88,16 +88,14 @@ def get_args():
 
 
 class Trainer:
-    def __init__(self, args, model, data_loader, optimizer, scheduler, output_manager):
+    def __init__(self, args, model, data_loaders, optimizer, scheduler, output_manager):
         # self.args = args.args
         self.args = args
         self.device = args.device
         self.model = model.to(args.device)
         self.output_manager=output_manager
 
-        self.train_data_loader = data_loader.train_data_loader
-        self.validation_data_loader = data_loader.validation_data_loader
-        self.test_data_loader = data_loader.test_data_loader
+        self.train_data_loader, self.validation_data_loader, self.test_data_loader= data_loaders
 
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -170,8 +168,8 @@ class Trainer:
         # Set the mode of the model to trainer, then the parameters can begin to be trained
         self.model.train()
         # domain_index_of_images_in_this_patch is target domain index in the source domain list
-        for i, ((data, rotation_label, class_label), domain_index_of_images_in_this_patch) in enumerate(self.train_data_loader):
-            data, rotation_label, class_label, domain_index_of_images_in_this_patch = data.to(self.device), rotation_label.to(self.device), class_label.to(self.device), domain_index_of_images_in_this_patch.to(self.device)
+        for i, (data, rotation_label, class_label) in enumerate(self.train_data_loader):
+            data, rotation_label, class_label = data.to(self.device), rotation_label.to(self.device), class_label.to(self.device)
             self.optimizer.zero_grad()
 
             rotation_predict_label, class_predict_label = self.model(data)  # , lambda_val=lambda_val)
@@ -262,10 +260,12 @@ if __name__ == "__main__":
         temp = Container()
         temp.training_arguments = args
         temp.args = args
-        data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
+        # data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
+        data_loaders = get_DG_data_loader(args.source, args.target, args.data_dir, args.val_size,
+                                          args.bias_whole_image, args.batch_size)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
-        Trainer(args, model, data_loader, optimizer, scheduler, collector)
+        Trainer(args, model, data_loaders, optimizer, scheduler, collector)
 
 
 
