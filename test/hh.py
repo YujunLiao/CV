@@ -1,12 +1,5 @@
-import torch
-import PIL
-
-from dl.data.dataset.get_data import get_data
-from dl.data.dataset.base import BaseDataset
-from dl.data.dataset.rotation import Rotation
-
-
-
+from dl.dataset.get_data import get_data
+from dl.dataset import BaseDataset
 
 import torchvision.transforms as transforms
 

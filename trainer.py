@@ -1,25 +1,20 @@
 import copy
 import sys
-from tensorboardX import SummaryWriter
 from torch import optim
-import os
 from os.path import dirname
 
 import torch
 from torch import nn
-from torch.nn import functional as F
 from time import time, strftime, localtime
 import argparse
 # from utils.model.MyModel import MyModel
-from dl.model.MyModel import MyModel, get_model
+from dl.model.MyModel import get_model
 
-
-from utils.logger.Logger import Logger
-from dl.data.data_loader.DGRotationDataLoader import get_DG_data_loader
+from dl.data_loader.DGR import get_DGR_data_loader
 from dl.optimizer import  get_optimizer
 
 from dl.utils.collector import Collector
-from dl.utils.LazyMan import LazyMan, LazyMan2
+from dl.utils.LazyMan import LazyMan2
 import socket
 
 
@@ -261,8 +256,8 @@ if __name__ == "__main__":
         temp.training_arguments = args
         temp.args = args
         # data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
-        data_loaders = get_DG_data_loader(args.source, args.target, args.data_dir, args.val_size,
-                                          args.bias_whole_image, args.batch_size)
+        data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
+                                           args.bias_whole_image, args.batch_size)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
         Trainer(args, model, data_loaders, optimizer, scheduler, collector)

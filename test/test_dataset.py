@@ -1,4 +1,4 @@
-from dl.data.dataset.base import BaseDataset
+from dl.dataset import BaseDataset
 
 
 def test_dataset():

@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
-from dl.data.dataset.get_data import get_data
-from dl.data.dataset.rotation import Rotation
+from dl.dataset.get_data import get_data
+from dl.dataset.rotation import Rotation
 
 
 train_DL_fn = lambda DS, bs:torch.utils.data.DataLoader(
@@ -21,8 +21,8 @@ test_DL_fn = lambda DS, bs:torch.utils.data.DataLoader(
         drop_last=False)
 
 
-def get_DG_data_loader(sources='', target='', data_dir='', val_size=float(0),
-                       prob=float(0), batch_size=128):
+def get_DGR_data_loader(sources='', target='', data_dir='', val_size=float(0),
+                        prob=float(0), batch_size=128):
     train_paths, val_paths, train_labels, val_labels = \
         get_data(sources, dir=data_dir+'train/', val_size=val_size)
     test_paths, _, test_labels, _ = get_data(target, dir=data_dir+'test/')
