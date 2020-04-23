@@ -20,7 +20,12 @@ def split(list_1, list_2, proportion=float(0)):
     return [list_1_2, list_1_1, list_2_2, list_2_1]
 
 
-def paths_and_labels_from(files):
+def p_and_l_from(files):
+    """Read paths and labels from txt list.
+
+    :param files:
+    :return:
+    """
     if isinstance(files, str):
         files = [files]
     paths = []
@@ -35,7 +40,14 @@ def paths_and_labels_from(files):
     return [paths, labels]
 
 
-def get_data(domains, dir=f'{dirname(__file__)}/../data/train/', val_size=float(0)):
+def get_p_l(domains, dir=f'{dirname(__file__)}/../data/train/', val_size=float(0)):
+    """Get Paths and labels from domain info.
+
+    :param domains:
+    :param dir:
+    :param val_size:
+    :return:
+    """
     if isinstance(domains, str):
         domains = [domains]
     paths_1 = []
@@ -44,7 +56,7 @@ def get_data(domains, dir=f'{dirname(__file__)}/../data/train/', val_size=float(
     labels_2 = []
 
     for domain in domains:
-        p, l = paths_and_labels_from(dir+domain)
+        p, l = p_and_l_from(dir + domain)
         # training_arguments.val_size refer to the percent of validation dataset, for example,
         # val_size=0.1 means 10% data is used for validation, 90% data is used for training.
         p_1, p_2, l_1, l_2 = split(p, l, val_size)

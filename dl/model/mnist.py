@@ -3,7 +3,7 @@ from torch import nn
 
 # built as https://github.com/ricvolpi/generalize-unseen-domains/blob/master/model.py
 class MnistModel(nn.Module):
-    def __init__(self, jigsaw_classes=1000, n_classes=100):
+    def __init__(self, usv_clses=1000, n_classes=100):
         super().__init__()
         
         outfeats = 1024 

@@ -10,28 +10,13 @@ import argparse
 # from utils.model.MyModel import MyModel
 from dl.model.model import get_model
 
-from dl.data_loader.DGR import get_DGR_data_loader
+from dl.data_loader.dgr import get_DGR_data_loader
 from dl.optimizer import  get_optimizer
 
-from dl.utils.collector import Writer
-from dl.utils.LazyMan import LazyMan2
+from dl.utils.writer import Writer
+from dl.utils.s2t import ms2st, ss2st
 import socket
-
-
-
-def pp(data):
-    print('----------------------------------------------')
-    if isinstance(data, str):
-        print(data)
-    if isinstance(data, list):
-        data = [str(_) for _ in data]
-        print(','.join(data))
-    if isinstance(data, dict):
-        for _ in data.items():
-            if isinstance(_[1], torch.utils.data.Dataset):
-                print(_[0], len(_[1]))
-            else:
-                print(_[0], _[1])
+from dl.utils.pp import pretty_print as pp
 
 
 def get_args():
@@ -40,18 +25,18 @@ def get_args():
         default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument("--network")
     parser.add_argument("--source", nargs='+')
-    parser.add_argument("--target", help="Target")
-    parser.add_argument("--n_classes", "-c", type=int)
-    parser.add_argument("--number_of_unsupervised_classes", type=int, default=4)
+    parser.add_argument("--target")
+    parser.add_argument("--num_classes", "-c", type=int)
+    parser.add_argument("--num_usv_classes", type=int, default=4)
 
-    parser.add_argument("--domains_list", nargs='+')
-    parser.add_argument("--target_domain_list", nargs='+')
+    parser.add_argument("--domains", nargs='+')
+    parser.add_argument("--targets", nargs='+')
     parser.add_argument("--repeat_times", type=int)
-    parser.add_argument("--parameters_lists", nargs='+',
+    parser.add_argument("--parameters", nargs='+',
                         type=lambda params:[float(_) for _ in params.split(',')])
 
-    parser.add_argument("--unsupervised_task_weight", type=float)
-    parser.add_argument("--bias_whole_image", default=None, type=float)
+    parser.add_argument("--usvt_weight", type=float)
+    parser.add_argument("--original_img_prob", default=None, type=float)
     parser.add_argument("--epochs", "-e", type=int, default=30)
     parser.add_argument("--batch_size", "-b", type=int, default=128)
     parser.add_argument("--learning_rate", "-l", type=float, default=.01)
@@ -66,10 +51,10 @@ def get_args():
     parser.add_argument("--redirect_to_file", default=None)
     parser.add_argument("--experiment", default='DG_rot')
 
-    parser.add_argument("--classify_only_ordered_images_or_not", type=bool)
-    parser.add_argument("--limit_source", default=None, type=int)
-    parser.add_argument("--limit_target", default=None, type=int)
-    parser.add_argument("--train_all", default=True, type=bool)
+    parser.add_argument("--classify_only_original_img", type=bool)
+    parser.add_argument("--max_num_s_img", default=None, type=int)
+    parser.add_argument("--max_num_t_img", default=None, type=int)
+    parser.add_argument("--train_all_param", default=True, type=bool)
     parser.add_argument("--nesterov", default=False, action='store_true')
 
     parser.add_argument("--TTA", default=False, action='store_true')
@@ -93,13 +78,15 @@ class Trainer:
         self.optimizer = optimizer
         self.scheduler = scheduler
 
-        self.classify_only_ordered_images_or_not = self.args.classify_only_ordered_images_or_not
-        self.number_of_images_classes = self.args.n_classes
+        self.classify_only_original_img = self.args.classify_only_original_img
+        self.num_classes = self.args.num_classes
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
         self.cur_epoch = -1
         # collect_frequency
         self.col_freq = 5
+        self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
+
         self.train()
 
     def train(self):
@@ -111,7 +98,6 @@ class Trainer:
         pp(vars(self.args))
 
         # TODO(lyj):
-        self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
         for self.cur_epoch in range(self.args.epochs):
             self.train_epoch()
 
@@ -125,18 +111,17 @@ class Trainer:
             'now': strftime("%Y-%m-%d %H:%M:%S", localtime()),
             'source': self.args.source,
             'target':self.args.target,
-            'param':self.args.parameters_lists,
+            'param':self.args.parameters,
             'bs': self.args.batch_size,
             'lr': self.args.learning_rate,
             'Highest accuracy on validation set appears on epoch': t_b_i.item(),
-            'Highest accuracy on test set appears on epoch ': v_b_i.item(),
-            'Accuracy on test set when the accuracy on validation set is highest:': test_select.item(),
-            'Highest accuracy on test set:': test_best.item(),
+            'Highest accuracy on test set appears on epoch': v_b_i.item(),
+            'Accuracy on test set when the accuracy on validation set is highest': test_select.item(),
+            'Highest accuracy on test set': test_best.item(),
             'duration': time() - start_time
         }
         pp(temp_dict)
         self.writer.w(temp_dict)
-
 
     def train_epoch(self):
         self.scheduler.step()
@@ -161,10 +146,10 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
             if i%self.col_freq == 0:
-                pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};'+\
+                pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};' +\
                    f'bs:{data.shape[0]};{i}/{len(self.train_data_loader)}',
-                   f'train_acc:j:{torch.sum(jig_pred == rotation_label.data).item()/data.shape[0]};'+\
-                      f'c:{torch.sum(cls_pred == class_label.data).item()/data.shape[0]}',
+                   f'train_acc:j:{torch.sum(jig_pred == rotation_label).item() / data.shape[0]};' +\
+                      f'c:{torch.sum(cls_pred == class_label).item() / data.shape[0]}',
                    f'train_loss:j:{unsupervised_task_loss.item()};c:{supervised_task_loss.item()}'])
 
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
@@ -192,24 +177,20 @@ class Trainer:
         return float(label_correct)/total, float(n_correct)/total
 
 
-
 def iterate_args(args):
-    temp_list = list()
-    for params in args.parameters_lists:
+    args_list = list()
+    for params in args.parameters:
         args.params = params
         args.unsupervised_task_weight = params[0]
         args.bias_whole_image = params[1]
 
-        lazy_man = LazyMan2(
-            args.domains_list,
-            args.target_domain_list
-        )
-        for source_and_target_domain in lazy_man.source_and_target_domain_permutation_list:
-            args.source = source_and_target_domain['source_domain']
-            args.target = source_and_target_domain['target_domain']
+        s2ts = ms2st(args.domains, args.targets)
+        for s2t in s2ts:
+            args.source = s2t['s']
+            args.target = s2t['t']
             for i in range(int(args.repeat_times)):
-                temp_list.append(copy.deepcopy(args))
-    return temp_list
+                args_list.append(copy.deepcopy(args))
+    return args_list
 
 
 
@@ -233,8 +214,8 @@ if __name__ == "__main__":
             sys.stdout = open(output_dir+args.redirect_output, 'a')
 
         model = get_model(args.network,
-                          jigsaw_classes=args.number_of_unsupervised_classes,
-                          classes=args.n_classes)
+                          num_usv_classes=args.num_usv_classes,
+                          num_classes=args.num_classes)
         is_patch_based_or_not = model.is_patch_based()
         temp = Container()
         temp.training_arguments = args
@@ -244,7 +225,7 @@ if __name__ == "__main__":
         #                                    args.bias_whole_image, args.batch_size)
         data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
                                            args.bias_whole_image, args.batch_size, 100)
-        optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all)
+        optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
         Trainer(args, model, data_loaders, optimizer, scheduler, writer)
 

@@ -1,7 +1,6 @@
 from torch import optim
 
 
-
 def get_optimizer(model, lr=0.001, train_all=True, nesterov=False):
         if train_all:
             model_parameters = model.parameters()

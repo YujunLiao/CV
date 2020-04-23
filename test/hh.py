@@ -1,4 +1,4 @@
-from dl.data_loader.utils import get_data
+from dl.data_loader.utils import get_p_l
 from dl.dataset import BaseDataset
 
 import torchvision.transforms as transforms
@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 tfs = [transforms.Resize((128, 128)), transforms.ToTensor(),
                   transforms.Normalize([0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
 
-paths, _, labels, _ = get_data('cartoon')
+paths, _, labels, _ = get_p_l('cartoon')
 ds = BaseDataset(paths, labels)
 # t_ds = torch.tensor(ds)
 

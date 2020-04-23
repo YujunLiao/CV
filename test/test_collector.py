@@ -1,4 +1,4 @@
-from dl.utils.collector import Recorder
+from dl.utils.recorder import Recorder
 
 def test_collector():
     col = Recorder()

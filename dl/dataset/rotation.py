@@ -1,7 +1,6 @@
-from PIL import Image
 import numpy as np
-from .base import BaseDataset
 import torchvision.transforms as transforms
+from .base import BaseDataset
 
 class Rotation(BaseDataset):
     def __init__(self, paths, labels, prob=float(0), _max=-1):

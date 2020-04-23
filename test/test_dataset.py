@@ -2,7 +2,7 @@ from os.path import dirname
 from dl.dataset.base import BaseDataset
 from dl.model.model import get_model
 
-from dl.data_loader.DGR import get_DGR_data_loader
+from dl.data_loader.dgr import get_DGR_data_loader
 
 
 def test_data_loader():

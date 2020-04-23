@@ -11,15 +11,15 @@ import warnings
 
 
 from torch.utils.data import Dataset
-from dl.data_loader.utils import get_data
+from dl.data_loader.utils import get_p_l
 
 
 class DARotationDataset():
     def __init__(self, my_training_arguments, is_patch_based_or_not):
         args = my_training_arguments.args
         train_paths, val_paths, train_labels, val_labels = \
-        get_data(args.source, dir=args.data_dir+'train/', val_size=args.val_size)
-        test_paths, _, test_labels, _ = get_data(args.target, dir=args.data_dir+'test/')
+        get_p_l(args.source, dir=args.data_dir + 'train/', val_size=args.val_size)
+        test_paths, _, test_labels, _ = get_p_l(args.target, dir=args.data_dir + 'test/')
         max_number_of_train_dataset = args.limit_source
         max_number_of_test_dataset = args.limit_target
         img_transformer, tile_transformer = self._get_train_transformers(args)

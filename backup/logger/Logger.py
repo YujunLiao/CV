@@ -85,7 +85,7 @@ class Logger():
             log_name += "_TAll"
         if args.bias_whole_image:
             log_name += "_bias%g" % args.bias_whole_image
-        if args.classify_only_ordered_images_or_not:
+        if args.classify_only_original_img:
             log_name += "_classifyOnlySane"
         if args.TTA:
             log_name += "_TTA"

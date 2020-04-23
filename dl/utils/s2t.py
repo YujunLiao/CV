@@ -1,6 +1,25 @@
-from PIL import Image
 
-# CALTECH LABELME PASCAL SUN
+
+# Multi source domain to single target domain
+def ms2st(all, targets):
+    s2ts = []
+    for t in targets:
+        s2ts.append({
+                't': t,
+                's': [_ for _ in all if _ != t]})
+    return s2ts
+
+def ss2st(sources, targets):
+    s2ts = []
+    for s in sources:
+        for t in targets:
+            if s==t:
+                continue
+            s2ts.append({
+                    't': t,
+                    's': [s]})
+    return s2ts
+
 class LazyMan2:
     """
     Input, domain_list, target_domain_list,
@@ -10,23 +29,22 @@ class LazyMan2:
     Multi source domain to single target domain
     """
 
-    def __init__(self, domain_list, target_domain_list):
-        self.domain_list = domain_list
-        self.target_domain_list = target_domain_list
+    def __init__(self, ):
+        self.all = all
+        self.targets = targets
         # self.number_of_domains = len(domain_list)
-        self.source_and_target_domain_permutation_list = \
-        self._set_source_and_target_domain_permutation_list()
+        self.dfps = self.domain_transfer_pairs()
 
-    def _set_source_and_target_domain_permutation_list(self):
-        source_and_target_domain_permutation_list = []
-        for target_domain in self.target_domain_list:
-            source_domain = []
-            for i in self.domain_list:
-                if i != target_domain:
-                    source_domain.append(i)
+    def domain_transfer_pairs(self):
+        dfps = []
+        for t in self.targets:
+            s = []
+            for i in self.all:
+                if i != t:
+                    s.append(i)
             domain_dictionary = {
-                'target_domain': target_domain,
-                'source_domain':source_domain
+                'target_domain': t,
+                's':s
             }
             source_and_target_domain_permutation_list.append(domain_dictionary)
         return source_and_target_domain_permutation_list

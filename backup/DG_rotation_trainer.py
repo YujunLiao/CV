@@ -39,7 +39,7 @@ class DGRotationTrainer:
         self.optimizer = my_optimizer.optimizer
         self.scheduler = my_scheduler.scheduler
 
-        self.classify_only_ordered_images_or_not = self.training_arguments.classify_only_ordered_images_or_not
+        self.classify_only_ordered_images_or_not = self.training_arguments.classify_only_original_img
         self.number_of_images_classes = self.training_arguments.n_classes
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
@@ -63,7 +63,7 @@ class DGRotationTrainer:
             rotation_predict_label, class_predict_label = self.model(data)  # , lambda_val=lambda_val)
             unsupervised_task_loss = criterion(rotation_predict_label, rotation_label)
 
-            if self.training_arguments.classify_only_ordered_images_or_not:
+            if self.training_arguments.classify_only_original_img:
                 if self.target_domain_index is not None:
                     # images_should_be_selected_or_not is a 128*1 list containing True or False.
                     images_should_be_selected_or_not = (rotation_label == 0) & (domain_index_of_images_in_this_patch != self.target_domain_index)
@@ -94,8 +94,8 @@ class DGRotationTrainer:
                     "class": supervised_task_loss.item()
                  },
                 {
-                    "jigsaw": torch.sum(jig_pred == rotation_label.data).item(),
-                    "class": torch.sum(cls_pred == class_label.data).item(),
+                    "jigsaw": torch.sum(jig_pred == rotation_label).item(),
+                    "class": torch.sum(cls_pred == class_label).item(),
                  },
                 data.shape[0]
             )
@@ -124,8 +124,8 @@ class DGRotationTrainer:
             jigsaw_logit, class_logit = self.model(data)
             _, cls_pred = class_logit.max(dim=1)
             _, jig_pred = jigsaw_logit.max(dim=1)
-            class_correct += torch.sum(cls_pred == class_l.data)
-            jigsaw_correct += torch.sum(jig_pred == jig_l.data)
+            class_correct += torch.sum(cls_pred == class_l)
+            jigsaw_correct += torch.sum(jig_pred == jig_l)
         return jigsaw_correct, class_correct
 
 
@@ -145,9 +145,9 @@ class DGRotationTrainer:
             jigsaw_logit, single_logit = self.model(data[:, 0])
             _, jig_pred = jigsaw_logit.max(dim=1)
             _, single_logit = single_logit.max(dim=1)
-            single_correct += torch.sum(single_logit == class_l.data)
-            class_correct += torch.sum(cls_pred == class_l.data)
-            jigsaw_correct += torch.sum(jig_pred == jig_l.data[:, 0])
+            single_correct += torch.sum(single_logit == class_l)
+            class_correct += torch.sum(cls_pred == class_l)
+            jigsaw_correct += torch.sum(jig_pred == jig_l[:, 0])
         return jigsaw_correct, class_correct, single_correct
 
     def do_training(self):
@@ -180,7 +180,7 @@ class DGRotationTrainer:
         print("unsupervised_task_weight:", self.training_arguments.unsupervised_task_weight)
         # TODO(change bias whole image)
         print("bias_hole_image:", self.training_arguments.bias_whole_image)
-        print("only_classify the ordered image:", self.training_arguments.classify_only_ordered_images_or_not)
+        print("only_classify the ordered image:", self.training_arguments.classify_only_original_img)
         print("Highest accuracy on validation set appears on epoch ", val_res.argmax().data)
         print("Highest accuracy on test set appears on epoch ", test_res.argmax().data)
         print("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best])
@@ -194,7 +194,7 @@ class DGRotationTrainer:
             "target domain:" + self.training_arguments.target,
             "jigweight:" + str(self.training_arguments.unsupervised_task_weight),
             "bias_hole_image:" + str(self.training_arguments.bias_whole_image),
-            "only_classify the ordered image:" + str(self.training_arguments.classify_only_ordered_images_or_not),
+            "only_classify the ordered image:" + str(self.training_arguments.classify_only_original_img),
             "batch_size:" + str(self.training_arguments.batch_size) + " learning_rate:" + str(self.training_arguments.learning_rate),
             "Highest accuracy on validation set appears on epoch " + str(val_res.argmax().data),
             "Highest accuracy on test set appears on epoch " + str(test_res.argmax().data),
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     my_training_arguments.args.TTA = False
     my_training_arguments.args.nesterov = False
 
-    for parameter_pair in my_training_arguments.args.parameters_lists:
+    for parameter_pair in my_training_arguments.args.parameters:
 
         my_training_arguments.args.unsupervised_task_weight=parameter_pair[0]
         my_training_arguments.args.bias_whole_image=parameter_pair[1]
@@ -234,8 +234,8 @@ if __name__ == "__main__":
         #     ['art_painting', 'cartoon', 'sketch', 'photo']
         # )
         lazy_man = LazyMan2(
-            my_training_arguments.args.domains_list,
-            my_training_arguments.args.target_domain_list
+            my_training_arguments.args.domains,
+            my_training_arguments.args.targets
         )
 
         output_file_path = \
@@ -252,7 +252,7 @@ if __name__ == "__main__":
             f = open( output_file_path + 'original_record', 'w')
             sys.stdout = f
 
-        for source_and_target_domain in lazy_man.source_and_target_domain_permutation_list:
+        for source_and_target_domain in lazy_man.dfps:
             my_training_arguments.args.source=source_and_target_domain['source_domain']
             my_training_arguments.args.target=source_and_target_domain['target_domain']
 
