@@ -1,5 +1,4 @@
-from dl.dataset import BaseDataset
-
+from dl.dataset.base import BaseDataset
 
 def test_dataset():
     _dataset = BaseDataset([1, 2, 3], [1, 2, 3])

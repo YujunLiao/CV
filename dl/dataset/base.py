@@ -1,13 +1,5 @@
-import numpy as np
-#import torch
-import torch.utils.data as data
-# import torchvision
-import torchvision.transforms as transforms
 from PIL import Image
-from random import random
-import torch
-import bisect
-import warnings
+import torch.utils.data as data
 
 
 class BaseDataset(data.Dataset):

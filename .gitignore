@@ -1,5 +1,4 @@
-dl/model/pretrained/parameters/
 *.ipynb
 *.pyc
 .idea/*
-dl/data/data/
+data/

@@ -1,25 +1,6 @@
-import torch
-from torch.utils.data import DataLoader
-from dl.dataset.get_data import get_data
-from dl.dataset.rotation import Rotation
-
-
-train_DL_fn = lambda DS, bs:torch.utils.data.DataLoader(
-        DS,
-        batch_size=bs,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True,
-        drop_last=True)
-
-test_DL_fn = lambda DS, bs:torch.utils.data.DataLoader(
-        DS,
-        batch_size=bs,
-        shuffle=False,
-        num_workers=4,
-        pin_memory=True,
-        drop_last=False)
-
+from .fns import train_DL_fn, test_DL_fn
+from .utils import get_data
+from ..dataset.rotation import Rotation
 
 def get_DGR_data_loader(sources='', target='', data_dir='', val_size=float(0),
                         prob=float(0), batch_size=128):

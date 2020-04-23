@@ -1,4 +1,4 @@
-from dl.dataset.get_data import get_data
+from dl.data_loader.utils import get_data
 from dl.dataset import BaseDataset
 
 import torchvision.transforms as transforms

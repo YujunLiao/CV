@@ -8,7 +8,7 @@ from torch import nn
 from time import time, strftime, localtime
 import argparse
 # from utils.model.MyModel import MyModel
-from dl.model.MyModel import get_model
+from dl.model.model import get_model
 
 from dl.data_loader.DGR import get_DGR_data_loader
 from dl.optimizer import  get_optimizer
@@ -61,7 +61,7 @@ def get_args():
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
     parser.add_argument("--data_dir",
-                        default=f'{dirname(__file__)}/dl/data/data/')
+                        default=f'{dirname(__file__)}/data/')
     parser.add_argument("--output_dir", default='./output/')
     parser.add_argument("--redirect_to_file", default=None)
     parser.add_argument("--experiment", default='DG_rot')

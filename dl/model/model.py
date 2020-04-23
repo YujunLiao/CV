@@ -1,6 +1,5 @@
 # from model.pretrained import caffenet, resnet, mnist, alexnet
-from dl.model.pretrained import resnet
-from dl.model.pretrained import caffenet, mnist
+from dl.model import caffenet, mnist, resnet
 
 model_fns = {
     'caffenet': caffenet.get_caffenet,
