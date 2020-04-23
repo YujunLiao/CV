@@ -4,8 +4,8 @@ from .base import BaseDataset
 import torchvision.transforms as transforms
 
 class Rotation(BaseDataset):
-    def __init__(self, paths, labels, prob=float(0)):
-        super().__init__(paths, labels)
+    def __init__(self, paths, labels, prob=float(0), _max=-1):
+        super().__init__(paths, labels, _max)
         self.prob = prob
 
 

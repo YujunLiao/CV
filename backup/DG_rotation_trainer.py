@@ -100,7 +100,7 @@ class DGRotationTrainer:
                 data.shape[0]
             )
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
-        self.model.eval()
+        self.model.test()
         with torch.no_grad():
             for phase, loader in self.test_loaders.items():
                 total = len(loader.dataset)

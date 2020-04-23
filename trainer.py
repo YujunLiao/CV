@@ -13,7 +13,7 @@ from dl.model.model import get_model
 from dl.data_loader.DGR import get_DGR_data_loader
 from dl.optimizer import  get_optimizer
 
-from dl.utils.collector import Collector
+from dl.utils.collector import Writer
 from dl.utils.LazyMan import LazyMan2
 import socket
 
@@ -24,8 +24,8 @@ def pp(data):
     if isinstance(data, str):
         print(data)
     if isinstance(data, list):
-        for _ in data:
-            print(_)
+        data = [str(_) for _ in data]
+        print(','.join(data))
     if isinstance(data, dict):
         for _ in data.items():
             if isinstance(_[1], torch.utils.data.Dataset):
@@ -83,15 +83,13 @@ def get_args():
 
 
 class Trainer:
-    def __init__(self, args, model, data_loaders, optimizer, scheduler, output_manager):
+    def __init__(self, args, model, data_loaders, optimizer, scheduler, writer):
         # self.args = args.args
         self.args = args
         self.device = args.device
         self.model = model.to(args.device)
-        self.output_manager=output_manager
-
+        self.writer = writer
         self.train_data_loader, self.validation_data_loader, self.test_data_loader= data_loaders
-
         self.optimizer = optimizer
         self.scheduler = scheduler
 
@@ -100,69 +98,53 @@ class Trainer:
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
         self.cur_epoch = -1
-        self.log_freq = 30
-
+        # collect_frequency
+        self.col_freq = 5
         self.train()
 
     def train(self):
         start_time = time()
         pp('Start training')
-        pp({
-            'train':self.train_data_loader.dataset,
+        pp({'train':self.train_data_loader.dataset,
             'validation': self.validation_data_loader.dataset,
-            'test': self.test_data_loader.dataset,
-        })
+            'test': self.test_data_loader.dataset})
         pp(vars(self.args))
 
         # TODO(lyj):
         self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
-        for self.current_epoch in range(self.args.epochs):
+        for self.cur_epoch in range(self.args.epochs):
             self.train_epoch()
-        val_res = self.results["val"]
-        test_res = self.results["test"]
-        idx_best = val_res.argmax()
+
+        v_b_i = self.results["val"].argmax()
+        t_b_i = self.results["test"].argmax()
+        test_best = self.results["test"].max()
+        test_select = self.results["test"][v_b_i]
 
         # print("Best val %g, corresponding test %g - best test: %g" % (val_res.max(), test_res[idx_best], test_res.max()))
-        pp(strftime("%Y-%m-%d %H:%M:%S", localtime()))
         temp_dict = {
+            'now': strftime("%Y-%m-%d %H:%M:%S", localtime()),
             'source': self.args.source,
             'target':self.args.target,
             'param':self.args.parameters_lists,
-            'Highest accuracy on validation set appears on epoch': val_res.argmax().data,
-            'Highest accuracy on test set appears on epoch ': test_res.argmax().data,
-            'Accuracy on test set when the accuracy on validation set is highest:%.3f': test_res[idx_best],
-            'Highest accuracy on test set:%.3f': test_res.max(),
-
+            'bs': self.args.batch_size,
+            'lr': self.args.learning_rate,
+            'Highest accuracy on validation set appears on epoch': t_b_i.item(),
+            'Highest accuracy on test set appears on epoch ': v_b_i.item(),
+            'Accuracy on test set when the accuracy on validation set is highest:': test_select.item(),
+            'Highest accuracy on test set:': test_best.item(),
+            'duration': time() - start_time
         }
         pp(temp_dict)
+        self.writer.w(temp_dict)
 
-
-
-        self.output_manager.add([
-            '--------------------------------------------------------',
-            str(strftime("%Y-%m-%d %H:%M:%S", localtime())),
-            self.args.source,
-            "target domain:" + self.args.target,
-            "jigweight:" + str(self.args.unsupervised_task_weight),
-            "bias_hole_image:" + str(self.args.bias_whole_image),
-            "only_classify the ordered image:" + str(self.args.classify_only_ordered_images_or_not),
-            "batch_size:" + str(self.args.batch_size) + " learning_rate:" + str(self.args.learning_rate),
-            "Highest accuracy on validation set appears on epoch " + str(val_res.argmax().data),
-            "Highest accuracy on test set appears on epoch " + str(test_res.argmax().data),
-            str("Accuracy on test set when the accuracy on validation set is highest:%.3f" % test_res[idx_best]),
-            str("Highest accuracy on test set:%.3f" % test_res.max()),
-            str("It took %g" % (time() - start_time))
-        ])
 
     def train_epoch(self):
-        self.cur_epoch += 1
         self.scheduler.step()
         lrs = self.scheduler.get_lr()
         criterion = nn.CrossEntropyLoss()
 
         # Set the mode of the model to trainer, then the parameters can begin to be trained
         self.model.train()
-        # domain_index_of_images_in_this_patch is target domain index in the source domain list
         for i, (data, rotation_label, class_label) in enumerate(self.train_data_loader):
             data, rotation_label, class_label = data.to(self.device), rotation_label.to(self.device), class_label.to(self.device)
             self.optimizer.zero_grad()
@@ -178,7 +160,7 @@ class Trainer:
 
             loss.backward()
             self.optimizer.step()
-            if i%self.log_freq == 0:
+            if i%self.col_freq == 0:
                 pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};'+\
                    f'bs:{data.shape[0]};{i}/{len(self.train_data_loader)}',
                    f'train_acc:j:{torch.sum(jig_pred == rotation_label.data).item()/data.shape[0]};'+\
@@ -191,21 +173,23 @@ class Trainer:
         self.model.eval()
         with torch.no_grad():
             for phase, loader in self.test_loaders.items():
-                total = len(loader.dataset)
-                class_correct = Trainer.eval(self.model, loader, device=self.device)
-                class_acc = float(class_correct) / total
-                pp(f'{phase}_acc:c:{class_acc}')
-                self.results[phase][self.current_epoch] = class_acc
+                l_acc, _ = Trainer.test(self.model, loader, device=self.device)
+                pp(f'{phase}_acc:c:{l_acc}')
+                self.results[phase][self.cur_epoch] = l_acc
 
     @staticmethod
-    def eval(model, loader, device='cpu'):
-        class_correct = 0
-        for _, (data, _, class_l) in enumerate(loader):
-            data, class_l = data.to(device), class_l.to(device)
-            _, class_logit = model(data)
-            _, cls_pred = class_logit.max(dim=1)
-            class_correct += torch.sum(cls_pred == class_l.data)
-        return class_correct
+    def test(model, loader, device='cpu'):
+        label_correct = 0
+        n_correct = 0
+        total = len(loader.dataset)
+        for _, (data, n, label) in enumerate(loader):
+            data, n, label = data.to(device), n.to(device), label.to(device)
+            n_logit, l_logit = model(data)
+            _, l_pred = l_logit.max(dim=1)
+            _, n_pred = n_logit.max(dim=1)
+            label_correct += torch.sum(l_pred == label).item()
+            n_correct += torch.sum(n_pred == n).item()
+        return float(label_correct)/total, float(n_correct)/total
 
 
 
@@ -241,7 +225,7 @@ if __name__ == "__main__":
     for args in iterate_args(args):
         output_dir = f'{args.output_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/' + \
         '_'.join([str(_) for _ in args.params])
-        collector = Collector(
+        writer = Writer(
             output_dir=output_dir,
             file=f'{args.source[0]}_{args.target}'
         )
@@ -256,11 +240,13 @@ if __name__ == "__main__":
         temp.training_arguments = args
         temp.args = args
         # data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
+        # data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
+        #                                    args.bias_whole_image, args.batch_size)
         data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
-                                           args.bias_whole_image, args.batch_size)
+                                           args.bias_whole_image, args.batch_size, 100)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
-        Trainer(args, model, data_loaders, optimizer, scheduler, collector)
+        Trainer(args, model, data_loaders, optimizer, scheduler, writer)
 
 
 
