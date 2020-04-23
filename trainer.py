@@ -15,7 +15,7 @@ from dl.model.MyModel import MyModel, get_model
 
 
 from utils.logger.Logger import Logger
-from dl.data.data_loader.DGRotationDataLoader import DGRotationDataLoader, get_DG_data_loader
+from dl.data.data_loader.DGRotationDataLoader import get_DG_data_loader
 from dl.optimizer import  get_optimizer
 
 from dl.utils.collector import Collector
@@ -205,8 +205,8 @@ class Trainer:
     @staticmethod
     def eval(model, loader, device='cpu'):
         class_correct = 0
-        for _, ((data, _, class_l), _) in enumerate(loader):
-            data, _, class_l = data.to(device), _.to(device), class_l.to(device)
+        for _, (data, _, class_l) in enumerate(loader):
+            data, class_l = data.to(device), class_l.to(device)
             _, class_logit = model(data)
             _, cls_pred = class_logit.max(dim=1)
             class_correct += torch.sum(cls_pred == class_l.data)

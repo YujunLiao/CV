@@ -77,14 +77,14 @@ class Flatten(nn.Module):
         return x.view(x.size(0), -1)
 
 
-def get_caffenet(jigsaw_classes, classes):
+def get_caffenet(**kwargs):
     """
 
     :param jigsaw_classes:
     :param classes:
     :return:
     """
-    model = AlexNetCaffe(jigsaw_classes, classes)
+    model = AlexNetCaffe(**kwargs)
     for m in model.modules():
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight, .1)

@@ -78,7 +78,7 @@ def get_model(network, **kwargs):
 
         # When using rotation technology as the unsupervised task, there are in total
         # 4 classes, which are original one, 90, 180, 270 degree.
-        # jigsaw_classes=my_training_arguments.number_of_unsupervised_classes,
+        # jigsaw_classes=kwargs['jigsaw_classes'],
         # classes=my_training_arguments.n_classes
         kwargs
         # jigsaw_classes=jigsaw_classes,
