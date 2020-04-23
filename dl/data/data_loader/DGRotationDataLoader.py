@@ -1,15 +1,24 @@
-# from torchvision import transforms
 import torch
 from torch.utils.data import DataLoader
-# from trainer_utils.data_loader.helper.JigsawLoader import get_split_dataset_info
-# from os.path import join, dirname
-# from trainer_utils.data_loader.helper.JigsawLoader import JigsawDataset, JigsawTestDataset, get_split_dataset_info, _dataset_info
-# from trainer_utils.data_loader.helper.concat_dataset import ConcatDataset
-# from random import sample, random
-from dl.data.dataset.DGRotationDataset import DARotationDataset
 from dl.data.dataset.get_data import get_data
-
 from dl.data.dataset.rotation import Rotation
+
+
+train_DL_fn = lambda DS, bs:torch.utils.data.DataLoader(
+        DS,
+        batch_size=bs,
+        shuffle=True,
+        num_workers=4,
+        pin_memory=True,
+        drop_last=True)
+
+test_DL_fn = lambda DS, bs:torch.utils.data.DataLoader(
+        DS,
+        batch_size=bs,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True,
+        drop_last=False)
 
 
 def get_DG_data_loader(sources='', target='', data_dir='', val_size=float(0),
@@ -23,32 +32,8 @@ def get_DG_data_loader(sources='', target='', data_dir='', val_size=float(0),
     val_DS = Rotation(val_paths, val_labels, prob=0)
     test_DS = Rotation(test_paths, test_labels, prob=0)
 
-    train_DL = torch.utils.data.DataLoader(
-        train_DS,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True,
-        drop_last=True
-    )
-    val_DL = torch.utils.data.DataLoader(
-        val_DS,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=4,
-        pin_memory=True,
-        drop_last=False
-    )
-    test_DL = torch.utils.data.DataLoader(
-        test_DS,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=4,
-        pin_memory=True,
-        drop_last=False
-    )
-
-    return train_DL, val_DL, test_DL
+    return train_DL_fn(train_DS, batch_size), test_DL_fn(val_DS, batch_size),\
+           test_DL_fn(test_DS, batch_size)
 
 
 
