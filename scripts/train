@@ -9,8 +9,8 @@ echo \$(date)
 echo "GPU \$GPU"
 echo "hostname \$\(hostname\)"
 echo "script \$script"
-/bin/bash \$script \$GPU
-# nohup /bin/bash \$script \$GPU
+# /bin/bash \$script \$GPU
+nohup /bin/bash \$script \$GPU
 # bash -i;
 "
 

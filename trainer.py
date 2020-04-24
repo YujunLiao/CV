@@ -120,6 +120,7 @@ class Trainer:
         }
         pp(temp_dict)
         self.writer.w(temp_dict)
+        self.recorder.save()
 
     def train_epoch(self):
         self.scheduler.step()
@@ -233,7 +234,7 @@ if __name__ == "__main__":
             sys.stdout = open(output_dir+args.redirect_to_file, 'a')
         if args.nth_repeat == 0:
             recorder = Recorder(vars(args),
-                                output_dir=output_dir,
+                                output_dir=output_dir.replace('output', 'mod_saved'),
                                 file=f'{args.source[0]}_{args.target}.rec')
         else:
             recorder = None
