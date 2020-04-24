@@ -42,6 +42,7 @@ def get_args():
     parser.add_argument("--learning_rate", "-l", type=float, default=.01)
     parser.add_argument("--image_size", type=int, default=225)
     parser.add_argument("--val_size", type=float, default="0.1")
+    parser.add_argument("--collect_freq", type=int, default=5)
 
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
@@ -78,13 +79,11 @@ class Trainer:
         self.optimizer = optimizer
         self.scheduler = scheduler
 
-        self.classify_only_original_img = self.args.classify_only_original_img
-        self.num_classes = self.args.num_classes
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
         self.cur_epoch = -1
         # collect_frequency
-        self.col_freq = 5
+        self.col_freq = self.args.collect_freq
         self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
 
         self.train()
@@ -145,12 +144,18 @@ class Trainer:
 
             loss.backward()
             self.optimizer.step()
-            if i%self.col_freq == 0:
-                pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};' +\
-                   f'bs:{data.shape[0]};{i}/{len(self.train_data_loader)}',
-                   f'train_acc:j:{torch.sum(jig_pred == rotation_label).item() / data.shape[0]};' +\
-                      f'c:{torch.sum(cls_pred == class_label).item() / data.shape[0]}',
-                   f'train_loss:j:{unsupervised_task_loss.item()};c:{supervised_task_loss.item()}'])
+
+            if i == 0:
+                print(f'{int(len(self.train_data_loader)/self.col_freq)}|', end='')
+            if i % self.col_freq == 0:
+                print('#', end='')
+            if i == len(self.train_data_loader) - 1:
+                print()
+                pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};' + \
+                    f'bs:{data.shape[0]}',
+                    f'train_acc:j:{torch.sum(jig_pred == rotation_label).item() / data.shape[0]};' + \
+                    f'c:{torch.sum(cls_pred == class_label).item() / data.shape[0]}',
+                    f'train_loss:j:{unsupervised_task_loss.item()};c:{supervised_task_loss.item()}'])
 
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
 
@@ -193,11 +198,6 @@ def iterate_args(args):
     return args_list
 
 
-
-class Container:
-    def __init__(self):
-        pass
-
 if __name__ == "__main__":
     # This flag allows you to enable the inbuilt cudnn auto-tuner to
     # find the best algorithm to use for your hardware.
@@ -217,14 +217,9 @@ if __name__ == "__main__":
                           num_usv_classes=args.num_usv_classes,
                           num_classes=args.num_classes)
         is_patch_based_or_not = model.is_patch_based()
-        temp = Container()
-        temp.training_arguments = args
-        temp.args = args
-        # data_loader = DGRotationDataLoader(temp, is_patch_based_or_not)
-        # data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
-        #                                    args.bias_whole_image, args.batch_size)
         data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
-                                           args.bias_whole_image, args.batch_size, 100)
+                                           args.bias_whole_image, args.batch_size,
+                                           args.max_num_s_img)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
         Trainer(args, model, data_loaders, optimizer, scheduler, writer)
