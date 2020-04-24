@@ -39,7 +39,8 @@ def get_args():
     parser.add_argument("--learning_rate", "-l", type=float, default=.01)
     parser.add_argument("--image_size", type=int, default=225)
     parser.add_argument("--val_size", type=float, default="0.1")
-    parser.add_argument("--collect_freq", type=int, default=5)
+    parser.add_argument("--collect_per_batch", type=int, default=5)
+    parser.add_argument("--save_model_per_epoch", type=int, default=5)
 
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
@@ -50,8 +51,8 @@ def get_args():
     parser.add_argument("--experiment", default='DG_rot')
 
     parser.add_argument("--classify_only_original_img", type=bool)
-    parser.add_argument("--max_num_s_img", default=None, type=int)
-    parser.add_argument("--max_num_t_img", default=None, type=int)
+    parser.add_argument("--max_num_s_img", default=-1, type=int)
+    parser.add_argument("--max_num_t_img", default=-1, type=int)
     parser.add_argument("--train_all_param", default=True, type=bool)
     parser.add_argument("--nesterov", default=False, action='store_true')
 
@@ -80,7 +81,8 @@ class Trainer:
 
         self.cur_epoch = -1
         # collect_frequency
-        self.col_freq = self.args.collect_freq
+        self.collect_per_batch = self.args.collect_per_batch
+        self.save_model_per_epoch = self.args.save_model_per_epoch
         self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
 
         self.train()
@@ -142,17 +144,33 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
 
+            acc_class = torch.sum(cls_pred == class_label).item() / data.shape[0]
+            acc_r = torch.sum(jig_pred == rotation_label).item() / data.shape[0]
             if i == 0:
-                print(f'{int(len(self.train_data_loader)/self.col_freq)}|', end='')
-            if i % self.col_freq == 0:
+                print(f'{int(len(self.train_data_loader) / self.collect_per_batch)}|', end='')
+            if i % self.collect_per_batch == 0:
                 print('#', end='')
+                self.recorder.train.append({
+                    'acc_class': acc_class,
+                    'acc_r': acc_r,
+                    'loss_class': supervised_task_loss.item(),
+                    'loss_u': unsupervised_task_loss.item(),
+                    'loss': loss.item(),
+                    'epoch': self.cur_epoch,
+                    'num_batch': i})
+
             if i == len(self.train_data_loader) - 1:
                 print()
                 pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};' + \
                     f'bs:{data.shape[0]}',
-                    f'train_acc:j:{torch.sum(jig_pred == rotation_label).item() / data.shape[0]};' + \
-                    f'c:{torch.sum(cls_pred == class_label).item() / data.shape[0]}',
+                    f'train_acc:u:{acc_class};c:{acc_r}'
                     f'train_loss:j:{unsupervised_task_loss.item()};c:{supervised_task_loss.item()}'])
+
+                if self.cur_epoch % self.save_model_per_epoch == 0:
+                    self.recorder.model.append({
+                        'params': self.model.state_dict(),
+                        'epoch': self.cur_epoch,
+                        'num_batch': i})
 
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
 
@@ -191,7 +209,9 @@ def iterate_args(args):
             args.source = s2t['s']
             args.target = s2t['t']
             for i in range(int(args.repeat_times)):
+                args.nth_repeat = i
                 args_list.append(copy.deepcopy(args))
+
     return args_list
 
 
@@ -211,7 +231,12 @@ if __name__ == "__main__":
         if args.redirect_to_file and args.redirect_to_file != 'null':
             print('redirect to ', output_dir+args.redirect_to_file)
             sys.stdout = open(output_dir+args.redirect_to_file, 'a')
-        recorder = Recorder(vars(args))
+        if args.nth_repeat == 0:
+            recorder = Recorder(vars(args),
+                                output_dir=output_dir,
+                                file=f'{args.source[0]}_{args.target}.rec')
+        else:
+            recorder = None
         model = get_model(args.network,
                           num_usv_classes=args.num_usv_classes,
                           num_classes=args.num_classes)

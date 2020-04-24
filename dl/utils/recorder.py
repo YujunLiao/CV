@@ -1,5 +1,6 @@
+import os
 from time import time, strftime, localtime
-
+import pickle
 
 class Cache:
     def __init__(self, d=None):
@@ -19,7 +20,7 @@ class Cache:
 
 
 class Recorder():
-    def __init__(self, data=None):
+    def __init__(self, data=None, output_dir='./output/', file='log.rec'):
         self.data = data if data else dict()
         assert isinstance(self.data, dict)
         self.train = Cache()
@@ -27,26 +28,53 @@ class Recorder():
         self.test = Cache()
         self.model = Cache()
 
+        self.output_dir = output_dir
+        self.file = file
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
     def open(self):
         self.data['start_time'] = strftime("%Y-%m-%d %H:%M:%S", localtime())
         self.start_time = time()
 
     def close(self):
+        assert self.start_time is not None
         self.data['duration'] = time() - self.start_time
 
 
+    def save(self):
+        with open(self.output_dir+self.file, 'wb') as f:
+            pickle.dump(self, f)
+
+    # @staticmethod
+    # def save(obj, file='./output/log.rec'):
+    #     with open(file, 'wb') as f:
+    #         pickle.dump(obj, f)
+
+    @staticmethod
+    def load(file='./output/log.rec'):
+        with open(file, 'rb') as f:
+            return pickle.load(f)
 
 
 
 
-col = Recorder()
-col.train.append({
-    'acc_class': 0.1,
-    'acc_r': 0.2,
-    'loss_class': 3.5,
-    'loss_r': 3.6,
-    'epoch': 2,
-    'mini_batch': 3})
+
+
+
+# col = Recorder()
+# col.train.append({
+#     'acc_class': 0.1,
+#     'acc_r': 0.2,
+#     'loss_class': 3.5,
+#     'loss_r': 3.6,
+#     'epoch': 2,
+#     'mini_batch': 3})
+#
+# col.save()
+#
+# col2 = Recorder.load()
+# print()
 
 
         # def __init__(self, **kwargs):
