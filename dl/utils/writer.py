@@ -6,10 +6,9 @@ class Writer:
         self.output_dir = output_dir
         self.file = file
         if not os.path.exists(output_dir):
-            try:
-                os.makedirs(output_dir)
-            except:
-                raise
+            os.makedirs(output_dir)
+        assert os.path.exists(output_dir)
+
 
     def w(self, data):
         with open(f'{self.output_dir}/{self.file}', 'a') as f:

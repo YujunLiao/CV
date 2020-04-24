@@ -1,22 +1,19 @@
 import copy
 import sys
-from torch import optim
 from os.path import dirname
-
-import torch
-from torch import nn
 from time import time, strftime, localtime
+import socket
+import torch
+from torch import optim
+from torch import nn
 import argparse
-# from utils.model.MyModel import MyModel
 from dl.model.model import get_model
-
 from dl.data_loader.dgr import get_DGR_data_loader
 from dl.optimizer import  get_optimizer
-
 from dl.utils.writer import Writer
 from dl.utils.s2t import ms2st, ss2st
-import socket
 from dl.utils.pp import pretty_print as pp
+from dl.utils.recorder import Recorder
 
 
 def get_args():
@@ -48,7 +45,7 @@ def get_args():
     # parser.add_argument("--folder_name", default=None)
     parser.add_argument("--data_dir",
                         default=f'{dirname(__file__)}/data/')
-    parser.add_argument("--output_dir", default='./output/')
+    parser.add_argument("--output_dir", default=f'{dirname(__file__)}/output/')
     parser.add_argument("--redirect_to_file", default=None)
     parser.add_argument("--experiment", default='DG_rot')
 
@@ -69,7 +66,7 @@ def get_args():
 
 
 class Trainer:
-    def __init__(self, args, model, data_loaders, optimizer, scheduler, writer):
+    def __init__(self, args, model, data_loaders, optimizer, scheduler, writer, recorder=None):
         # self.args = args.args
         self.args = args
         self.device = args.device
@@ -78,7 +75,7 @@ class Trainer:
         self.train_data_loader, self.validation_data_loader, self.test_data_loader= data_loaders
         self.optimizer = optimizer
         self.scheduler = scheduler
-
+        self.recorder = recorder
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
         self.cur_epoch = -1
@@ -205,14 +202,16 @@ if __name__ == "__main__":
     args = get_args()
     for args in iterate_args(args):
         output_dir = f'{args.output_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/' + \
-        '_'.join([str(_) for _ in args.params])
+        '_'.join([str(_) for _ in args.params])+'/'
+
         writer = Writer(
             output_dir=output_dir,
             file=f'{args.source[0]}_{args.target}'
         )
         if args.redirect_to_file and args.redirect_to_file != 'null':
-            sys.stdout = open(output_dir+args.redirect_output, 'a')
-
+            print('redirect to ', output_dir+args.redirect_to_file)
+            sys.stdout = open(output_dir+args.redirect_to_file, 'a')
+        recorder = Recorder(vars(args))
         model = get_model(args.network,
                           num_usv_classes=args.num_usv_classes,
                           num_classes=args.num_classes)
@@ -222,7 +221,7 @@ if __name__ == "__main__":
                                            args.max_num_s_img)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
-        Trainer(args, model, data_loaders, optimizer, scheduler, writer)
+        Trainer(args, model, data_loaders, optimizer, scheduler, writer, recorder)
 
 
 

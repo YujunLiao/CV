@@ -1,0 +1,13 @@
+# project_path=\$HOME/Files/pycharm_project/DG_rotation/;
+# script=\${project_path}scripts/DG_R_R18;
+ssh -t local "
+project_path=\$HOME/Files/pycharm_project/CV/output/*
+echo -n delete \$project_path y/n:
+read confirm
+if [ \$confirm == y ]
+then
+    rm -r \$project_path
+    echo delete successfully.
+fi
+"
+
