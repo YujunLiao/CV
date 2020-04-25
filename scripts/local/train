@@ -1,0 +1,18 @@
+/home/lyj/Files/project/pycharm/pytorch_interpreter/bin/python -u \
+/home/lyj/Files/project/pycharm/CV/trainer.py \
+--redirect_to_file null \
+--parameters 0.8,0.4 \
+--domains art_painting cartoon sketch photo \
+--targets art_painting    \
+--num_classes 7 \
+--repeat_times 1 \
+--network resnet18  --epochs 2 \
+--classify_only_original_img True    \
+--batch_size 128  --image_size 222 \
+--learning_rate 0.001 --val_size 0.1  \
+--train_all_param True   \
+--min_scale 0.8 --max_scale 1.0 --random_horiz_flip 0 --jitter 0 --tile_random_grayscale 0.1 \
+
+
+
+

@@ -33,7 +33,7 @@ class DGRotationTrainer:
         self.output_manager=output_manager
 
         self.train_data_loader = my_data_loader.train_data_loader
-        self.validation_data_loader = my_data_loader.validation_data_loader
+        self.validation_data_loader = my_data_loader.val_data_loader
         self.test_data_loader = my_data_loader.test_data_loader
 
         self.optimizer = my_optimizer.optimizer

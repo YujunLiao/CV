@@ -44,7 +44,6 @@ def get_args():
     parser.add_argument("--image_size", type=int, default=225)
     parser.add_argument("--val_size", type=float, default="0.1")
     parser.add_argument("--collect_per_batch", type=int, default=5)
-    parser.add_argument("--save_model_per_epoch", type=int, default=5)
 
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
@@ -77,15 +76,14 @@ class Trainer:
         self.device = args.device
         self.model = model.to(args.device)
         self.writer = writer
-        self.train_data_loader, self.validation_data_loader, self.test_data_loader= data_loaders
+        self.train_data_loader, self.val_data_loader, self.test_data_loader= data_loaders
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
+        self.test_loaders = {"val": self.val_data_loader, "test": self.test_data_loader}
 
         self.cur_epoch = -1
         # collect_frequency
         self.collect_per_batch = self.args.collect_per_batch
-        self.save_model_per_epoch = self.args.save_model_per_epoch
         self.results = {"val": torch.zeros(self.args.epochs), "test": torch.zeros(self.args.epochs)}
 
         self.train()
@@ -94,7 +92,7 @@ class Trainer:
         start_time = time()
         pp('Start training')
         pp({'train':self.train_data_loader.dataset,
-            'validation': self.validation_data_loader.dataset,
+            'validation': self.val_data_loader.dataset,
             'test': self.test_data_loader.dataset})
         pp(vars(self.args))
 
@@ -158,6 +156,13 @@ class Trainer:
                       f'{len(self.train_data_loader)}/{self.collect_per_batch}={col_n}|', end='')
             if i % self.collect_per_batch == 0:
                 print('#', end='')
+                wandb.log({'train/acc_class': acc_class,
+                            'train/acc_r': acc_r,
+                            'train/loss_class': supervised_task_loss.item(),
+                            'train/loss_u': unsupervised_task_loss.item(),
+                            'train/loss': loss.item(),
+                            'train/epoch': self.cur_epoch,
+                            'train/num_batch': i+self.cur_epoch*len(self.train_data_loader)})
                 # self.recorder.train.append({
                 #     'acc_class': acc_class,
                 #     'acc_r': acc_r,
@@ -188,6 +193,8 @@ class Trainer:
             for phase, loader in self.test_loaders.items():
                 l_acc, _ = Trainer.test(self.model, loader, device=self.device)
                 pp(f'{phase}_acc:c:{l_acc}')
+                wandb.log({f'{phase}/_acc': l_acc,
+                        f'{phase}/epoch': self.cur_epoch})
                 self.results[phase][self.cur_epoch] = l_acc
 
     @staticmethod
@@ -223,7 +230,7 @@ def iterate_args(args):
     return args_list
 
 
-if __name__ == "__main__":
+def main():
     # This flag allows you to enable the inbuilt cudnn auto-tuner to
     # find the best algorithm to use for your hardware.
     torch.backends.cudnn.benchmark = True
@@ -231,7 +238,10 @@ if __name__ == "__main__":
     for args in iterate_args(args):
         output_dir = f'{args.output_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/' + \
         '_'.join([str(_) for _ in args.params])+'/'
-
+        if args.nth_repeat==0:
+            wandb.init(project=args.experiment, dir=dirname(__file__), config=args,
+                       tags=[args.network, "-".join([str(_) for _ in args.params])],
+                       name=f'{args.source[0]}_{args.target}')
         writer = Writer(
             output_dir=output_dir,
             file=f'{args.source[0]}_{args.target}'
@@ -239,16 +249,10 @@ if __name__ == "__main__":
         if args.redirect_to_file and args.redirect_to_file != 'null':
             print('redirect to ', output_dir+args.redirect_to_file)
             sys.stdout = open(output_dir+args.redirect_to_file, 'a')
-        # if args.nth_repeat == 0:
-        #     recorder = Recorder(vars(args),
-        #                         output_dir=output_dir.replace('output', 'mod_saved'),
-        #                         file=f'{args.source[0]}_{args.target}.rec')
-        # else:
-        #     recorder = None
-        wandb.init()
         model = get_model(args.network,
                           num_usv_classes=args.num_usv_classes,
                           num_classes=args.num_classes)
+        wandb.watch(model, log='all')
         is_patch_based_or_not = model.is_patch_based()
         data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
                                            args.original_img_prob, args.batch_size,
@@ -256,6 +260,11 @@ if __name__ == "__main__":
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
         Trainer(args, model, data_loaders, optimizer, scheduler, writer)
+        wandb.join()
+
+if __name__ == "__main__":
+    main()
+
 
 
 

@@ -1,7 +1,7 @@
 import wandb
-for x in range(10):
-    wandb.init(project="runs-from-for-loop2", reinit=True)
+for x in range(3):
+    wandb.init(project="runs-from-for-loop2", name='t2', reinit=True)
     for y in range (100):
-        wandb.log({"metric": x+y})
-        wandb.run.save()
+        wandb.log({"tr/metric": x+y})
+        wandb.log({"test/ss": x + y})
     wandb.join()
