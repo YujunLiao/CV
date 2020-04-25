@@ -1,7 +1,7 @@
 *.ipynb
 *.pyc
-
-.idea/*
+.idea
 data
 output
+mod_saved
 

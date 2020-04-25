@@ -2,6 +2,9 @@ import os
 from time import time, strftime, localtime
 import pickle
 
+import torch
+
+
 class Cache:
     def __init__(self, d=None):
         pass
@@ -42,19 +45,24 @@ class Recorder():
         self.data['duration'] = time() - self.start_time
 
 
-    def save(self):
-        with open(self.output_dir+self.file, 'wb') as f:
-            pickle.dump(self, f)
 
-    # @staticmethod
-    # def save(obj, file='./output/log.rec'):
-    #     with open(file, 'wb') as f:
-    #         pickle.dump(obj, f)
+    def save(self):
+        torch.save(self, self.output_dir+self.file)
 
     @staticmethod
-    def load(file='./output/log.rec'):
-        with open(file, 'rb') as f:
-            return pickle.load(f)
+    def load(file='./output/log.rec', device=torch.device('cpu')):
+        # with open(file, 'rb') as f:
+        return torch.load(file, map_location=device)
+
+    # def save(self):
+    #     with open(self.output_dir+self.file, 'wb') as f:
+    #         pickle.dump(self, f)
+
+    # @staticmethod
+    # def load(file='./output/log.rec'):
+    #     with open(file, 'rb') as f:
+    #         return pickle.load(f)
+
 
 
 

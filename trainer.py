@@ -148,7 +148,8 @@ class Trainer:
             acc_class = torch.sum(cls_pred == class_label).item() / data.shape[0]
             acc_r = torch.sum(jig_pred == rotation_label).item() / data.shape[0]
             if i == 0:
-                print(f'{int(len(self.train_data_loader) / self.collect_per_batch)}|', end='')
+                col_n = int(len(self.train_data_loader) / self.collect_per_batch)
+                print(f'{len(self.train_data_loader)}/{self.collect_per_batch}={col_n}|', end='')
             if i % self.collect_per_batch == 0:
                 print('#', end='')
                 self.recorder.train.append({
@@ -172,6 +173,8 @@ class Trainer:
                         'params': self.model.state_dict(),
                         'epoch': self.cur_epoch,
                         'num_batch': i})
+                    print(self.recorder.model.params[0]['conv1.weight'][0])
+                    print()
 
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
 

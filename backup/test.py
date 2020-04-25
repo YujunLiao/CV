@@ -1,7 +1,7 @@
 import argparse
 # from trainer_utils.data_loader.dataset.PDataset import available_domains
 import pprint
-import test2
+import torch
 
 
 i ='sadfasd'
@@ -30,4 +30,16 @@ x,y = hh()
 print(x)
 print(y)
 print(__file__)
-test2.hh()
+
+
+
+layout = {
+    'categoryName1':{
+        'chartName1': ['tag1', 'tag2']
+    }
+}
+
+t1 = torch.Tensor([1,2,3])
+t2 = t1.detach().cpu()
+t3 = t2.detach()
+print()

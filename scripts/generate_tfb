@@ -1,0 +1,6 @@
+CUDA_VISIBLE_DEVICES=$1 \
+/home/giorgio/Files/pycharm_project/pytorch_interpreter/bin/python3.7 -u \
+/home/giorgio/Files/pycharm_project/CV/tfb.py \
+
+
+

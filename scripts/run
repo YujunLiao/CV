@@ -2,15 +2,16 @@
 # script=\${project_path}scripts/DG_R_R18;
 ssh -t local "
 project_path=\$HOME/Files/pycharm_project/CV/
-script=\${project_path}scripts/DG_R_R18
+# script=\${project_path}scripts/DG_R_R18
+script=\${project_path}scripts/generate_tfb
 GPU=0
 
 echo \$(date)
 echo "GPU \$GPU"
 echo "hostname \$\(hostname\)"
 echo "script \$script"
-# /bin/bash \$script \$GPU
-nohup /bin/bash \$script \$GPU
+/bin/bash \$script \$GPU
+# nohup /bin/bash \$script \$GPU
 # bash -i;
 "
 
