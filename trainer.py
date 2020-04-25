@@ -3,10 +3,12 @@ import sys
 from os.path import dirname
 from time import time, strftime, localtime
 import socket
+from math import ceil
 import torch
 from torch import optim
 from torch import nn
 import argparse
+import wandb
 from dl.model.model import get_model
 from dl.data_loader.dgr import get_DGR_data_loader
 from dl.optimizer import  get_optimizer
@@ -20,21 +22,23 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str,
         default='cuda' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument("--network")
+    parser.add_argument("--network", default='resnet18')
     parser.add_argument("--source", nargs='+')
     parser.add_argument("--target")
-    parser.add_argument("--num_classes", "-c", type=int)
+    parser.add_argument("--num_classes", "-c", type=int, default=7)
     parser.add_argument("--num_usv_classes", type=int, default=4)
 
-    parser.add_argument("--domains", nargs='+')
-    parser.add_argument("--targets", nargs='+')
-    parser.add_argument("--repeat_times", type=int)
-    parser.add_argument("--parameters", nargs='+',
+    parser.add_argument("--domains", nargs='+',
+                        default=['art_painting', 'cartoon', 'sketch', 'photo'])
+    parser.add_argument("--targets", nargs='+', default=['art_painting'])
+    parser.add_argument("--repeat_times", type=int, default=1)
+    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.5]],
                         type=lambda params:[float(_) for _ in params.split(',')])
+
 
     parser.add_argument("--usvt_weight", type=float)
     parser.add_argument("--original_img_prob", default=None, type=float)
-    parser.add_argument("--epochs", "-e", type=int, default=30)
+    parser.add_argument("--epochs", "-e", type=int, default=2)
     parser.add_argument("--batch_size", "-b", type=int, default=128)
     parser.add_argument("--learning_rate", "-l", type=float, default=.01)
     parser.add_argument("--image_size", type=int, default=225)
@@ -47,11 +51,11 @@ def get_args():
     parser.add_argument("--data_dir",
                         default=f'{dirname(__file__)}/data/')
     parser.add_argument("--output_dir", default=f'{dirname(__file__)}/output/')
-    parser.add_argument("--redirect_to_file", default=None)
+    parser.add_argument("--redirect_to_file", default='null')
     parser.add_argument("--experiment", default='DG_rot')
 
-    parser.add_argument("--classify_only_original_img", type=bool)
-    parser.add_argument("--max_num_s_img", default=-1, type=int)
+    parser.add_argument("--classify_only_original_img", type=bool, default=True)
+    parser.add_argument("--max_num_s_img", default=500, type=int)
     parser.add_argument("--max_num_t_img", default=-1, type=int)
     parser.add_argument("--train_all_param", default=True, type=bool)
     parser.add_argument("--nesterov", default=False, action='store_true')
@@ -67,7 +71,7 @@ def get_args():
 
 
 class Trainer:
-    def __init__(self, args, model, data_loaders, optimizer, scheduler, writer, recorder=None):
+    def __init__(self, args, model, data_loaders, optimizer, scheduler, writer):
         # self.args = args.args
         self.args = args
         self.device = args.device
@@ -76,7 +80,6 @@ class Trainer:
         self.train_data_loader, self.validation_data_loader, self.test_data_loader= data_loaders
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.recorder = recorder
         self.test_loaders = {"val": self.validation_data_loader, "test": self.test_data_loader}
 
         self.cur_epoch = -1
@@ -145,36 +148,37 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
 
+            # record and print
             acc_class = torch.sum(cls_pred == class_label).item() / data.shape[0]
             acc_r = torch.sum(jig_pred == rotation_label).item() / data.shape[0]
             if i == 0:
-                col_n = int(len(self.train_data_loader) / self.collect_per_batch)
-                print(f'{len(self.train_data_loader)}/{self.collect_per_batch}={col_n}|', end='')
+                col_n = ceil(len(self.train_data_loader) / self.collect_per_batch)
+                print(f'epoch:{self.cur_epoch}/{self.args.epochs};bs:{data.shape[0]};'
+                      f'lr:{" ".join([str(lr) for lr in lrs])}; '
+                      f'{len(self.train_data_loader)}/{self.collect_per_batch}={col_n}|', end='')
             if i % self.collect_per_batch == 0:
                 print('#', end='')
-                self.recorder.train.append({
-                    'acc_class': acc_class,
-                    'acc_r': acc_r,
-                    'loss_class': supervised_task_loss.item(),
-                    'loss_u': unsupervised_task_loss.item(),
-                    'loss': loss.item(),
-                    'epoch': self.cur_epoch,
-                    'num_batch': i})
+                # self.recorder.train.append({
+                #     'acc_class': acc_class,
+                #     'acc_r': acc_r,
+                #     'loss_class': supervised_task_loss.item(),
+                #     'loss_u': unsupervised_task_loss.item(),
+                #     'loss': loss.item(),
+                #     'epoch': self.cur_epoch,
+                #     'num_batch': i})
 
             if i == len(self.train_data_loader) - 1:
                 print()
-                pp([f'epoch:{self.cur_epoch}/{self.args.epochs};lr:{" ".join([str(lr) for lr in lrs])};' + \
-                    f'bs:{data.shape[0]}',
-                    f'train_acc:u:{acc_class};c:{acc_r}'
+                pp([f'train_acc:u:{acc_class};c:{acc_r}'
                     f'train_loss:j:{unsupervised_task_loss.item()};c:{supervised_task_loss.item()}'])
 
-                if self.cur_epoch % self.save_model_per_epoch == 0:
-                    self.recorder.model.append({
-                        'params': self.model.state_dict(),
-                        'epoch': self.cur_epoch,
-                        'num_batch': i})
-                    print(self.recorder.model.params[0]['conv1.weight'][0])
-                    print()
+                # if self.cur_epoch % self.save_model_per_epoch == 0:
+                #     self.recorder.model.append({
+                #         'params': self.model.state_dict(),
+                #         'epoch': self.cur_epoch,
+                #         'num_batch': i})
+                #     print(self.recorder.model.params[0]['conv1.weight'][0])
+                #     print()
 
             del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
 
@@ -206,7 +210,7 @@ def iterate_args(args):
     for params in args.parameters:
         args.params = params
         args.unsupervised_task_weight = params[0]
-        args.bias_whole_image = params[1]
+        args.original_img_prob = params[1]
 
         s2ts = ms2st(args.domains, args.targets)
         for s2t in s2ts:
@@ -235,22 +239,23 @@ if __name__ == "__main__":
         if args.redirect_to_file and args.redirect_to_file != 'null':
             print('redirect to ', output_dir+args.redirect_to_file)
             sys.stdout = open(output_dir+args.redirect_to_file, 'a')
-        if args.nth_repeat == 0:
-            recorder = Recorder(vars(args),
-                                output_dir=output_dir.replace('output', 'mod_saved'),
-                                file=f'{args.source[0]}_{args.target}.rec')
-        else:
-            recorder = None
+        # if args.nth_repeat == 0:
+        #     recorder = Recorder(vars(args),
+        #                         output_dir=output_dir.replace('output', 'mod_saved'),
+        #                         file=f'{args.source[0]}_{args.target}.rec')
+        # else:
+        #     recorder = None
+        wandb.init()
         model = get_model(args.network,
                           num_usv_classes=args.num_usv_classes,
                           num_classes=args.num_classes)
         is_patch_based_or_not = model.is_patch_based()
         data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
-                                           args.bias_whole_image, args.batch_size,
+                                           args.original_img_prob, args.batch_size,
                                            args.max_num_s_img)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
-        Trainer(args, model, data_loaders, optimizer, scheduler, writer, recorder)
+        Trainer(args, model, data_loaders, optimizer, scheduler, writer)
 
 
 

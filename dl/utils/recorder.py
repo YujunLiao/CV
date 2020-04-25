@@ -50,7 +50,7 @@ class Recorder():
         torch.save(self, self.output_dir+self.file)
 
     @staticmethod
-    def load(file='./output/log.rec', device=torch.device('cpu')):
+    def load(file='./output/log.rec', device='cuda' if torch.cuda.is_available() else 'cpu'):
         # with open(file, 'rb') as f:
         return torch.load(file, map_location=device)
 
