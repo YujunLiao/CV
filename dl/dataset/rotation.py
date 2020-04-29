@@ -1,6 +1,6 @@
 import numpy as np
 from .base import BaseDataset
-from.tf_fn import train_tf_fn, test_tf_fn, norm_tf_fn
+from.tf_fn import train_tf_fn, test_tf_fn, tile_tf_fn, norm_tf_fn
 
 class Rotation(BaseDataset):
     def __init__(self, paths='', labels='', prob=float(0), _max=-1):
@@ -36,6 +36,7 @@ class RotTrain(Rotation):
     def __getitem__(self, index):
         img, n, label = super().__getitem__(index)
         img = train_tf_fn(self.args)(img)
+        img = tile_tf_fn(img)
         img_t = norm_tf_fn(img)
         return img_t, n, label
 

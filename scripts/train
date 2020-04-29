@@ -5,7 +5,7 @@ ssh -t local "
 project_path=\$HOME/Files/pycharm_project/CV/
 script=\${project_path}scripts/remote/DG_R_R18
 # script=\${project_path}scripts/remote/DG_R_caffe
-GPU=0
+GPU=1
 
 echo \$(date)
 echo "GPU \$GPU"
