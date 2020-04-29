@@ -51,18 +51,18 @@ class AlexNet(nn.Module):
         return x
 
 
-def alexnet(classes, pretrained=False):
+def alexnet(num_classes, pretrained=False):
     r"""AlexNet model architecture from the
     `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = AlexNet(classes, True)
+    model = AlexNet(num_classes, True)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
 
-    model.classifier[-1] = nn.Linear(4096, classes)
+    model.classifier[-1] = nn.Linear(4096, num_classes)
     nn.init.xavier_uniform_(model.classifier[-1].weight, .1)
     nn.init.constant_(model.classifier[-1].bias, 0.)
     return model

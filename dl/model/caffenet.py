@@ -9,7 +9,7 @@ from dl.model.alexnet import Id
 
 
 class AlexNetCaffe(nn.Module):
-    def __init__(self, jigsaw_classes=1000, n_classes=100, domains=3, dropout=True):
+    def __init__(self, num_usv_classes=1000, num_classes=100, domains=3, dropout=True):
         super(AlexNetCaffe, self).__init__()
         # print("Using Caffe AlexNet")
         self.features = nn.Sequential(OrderedDict([
@@ -37,8 +37,8 @@ class AlexNetCaffe(nn.Module):
             ("relu7", nn.ReLU(inplace=True)),
             ("drop7", nn.Dropout() if dropout else Id())]))
 
-        self.jigsaw_classifier = nn.Linear(4096, jigsaw_classes)
-        self.class_classifier = nn.Linear(4096, n_classes)
+        self.usv_classifier = nn.Linear(4096, num_usv_classes)
+        self.class_classifier = nn.Linear(4096, num_classes)
         # self.domain_classifier = nn.Sequential(
         #     nn.Linear(256 * 6 * 6, 1024),
         #     nn.ReLU(),
@@ -48,18 +48,13 @@ class AlexNetCaffe(nn.Module):
         #     nn.Dropout(),
         #     nn.Linear(1024, domains))
 
-    def get_params(self, base_lr):
+    def get_params(self, lr):
         return [
             {"params": self.features.parameters(), "lr": 0.},
-            {
-                "params": chain(
-                    self.classifier.parameters(),
-                    self.jigsaw_classifier.parameters(),
-                    self.class_classifier.parameters()#, self.domain_classifier.parameters()
-                ),
-                "lr": base_lr
-            }
-        ]
+            {"params": chain(self.classifier.parameters(),
+                             self.usv_classifier.parameters(),
+                             self.class_classifier.parameters()), #, self.domain_classifier.parameters()
+            "lr": lr}]
 
     def is_patch_based(self):
         return False
@@ -69,7 +64,7 @@ class AlexNetCaffe(nn.Module):
         x = x.view(x.size(0), -1)
         #d = ReverseLayerF.apply(x, lambda_val)
         x = self.classifier(x)
-        return self.jigsaw_classifier(x), self.class_classifier(x)#, self.domain_classifier(d)
+        return self.usv_classifier(x), self.class_classifier(x)#, self.domain_classifier(d)
 
 
 class Flatten(nn.Module):
@@ -77,7 +72,7 @@ class Flatten(nn.Module):
         return x.view(x.size(0), -1)
 
 
-def get_caffenet(**kwargs):
+def caffenet(**kwargs):
     """
 
     :param jigsaw_classes:
@@ -90,7 +85,7 @@ def get_caffenet(**kwargs):
             nn.init.xavier_uniform_(m.weight, .1)
             nn.init.constant_(m.bias, 0.)
 
-    state_dict = torch.load(os.path.join(os.path.dirname(__file__), "parameters/alexnet_caffe.pth.tar"))
+    state_dict = torch.load(f'{os.path.dirname(__file__)}/../../data/cache/alexnet_caffe.pth.tar')
     del state_dict["classifier.fc8.weight"]
     del state_dict["classifier.fc8.bias"]
     model.load_state_dict(state_dict, strict=False)

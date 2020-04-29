@@ -40,8 +40,9 @@ def p_and_l_from(files):
     return [paths, labels]
 
 
-def get_p_l(domains, dir=f'{dirname(__file__)}/../data/train/', val_size=float(0)):
-    """Get Paths and labels from domain info.
+def get_p_l(domains='photo', val_size=float(0),
+            dir=f'{dirname(__file__)}/../../../data/train/'):
+    """Get Paths and labels of corresponding domains.
 
     :param domains:
     :param dir:

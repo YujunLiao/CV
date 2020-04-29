@@ -15,8 +15,15 @@ from dl.optimizer import  get_optimizer
 from dl.utils.writer import Writer
 from dl.utils.s2t import ms2st, ss2st
 from dl.utils.pp import pretty_print as pp
-from dl.utils.recorder import Recorder
+from dl.model import caffenet, resnet, mnist
 
+model_fns = {
+    'caffenet': caffenet.caffenet,
+    'resnet18': resnet.resnet18,
+    # 'alexnet': alexnet.alexnet,
+    'resnet50': resnet.resnet50,
+    'lenet': mnist.lenet
+}
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -41,7 +48,7 @@ def get_args():
     parser.add_argument("--epochs", "-e", type=int, default=2)
     parser.add_argument("--batch_size", "-b", type=int, default=128)
     parser.add_argument("--learning_rate", "-l", type=float, default=.01)
-    parser.add_argument("--image_size", type=int, default=225)
+    parser.add_argument("--image_size", type=int, default=222)
     parser.add_argument("--val_size", type=float, default="0.1")
     parser.add_argument("--collect_per_batch", type=int, default=5)
 
@@ -121,7 +128,6 @@ class Trainer:
         }
         pp(temp_dict)
         self.writer.w(temp_dict)
-        self.recorder.save()
 
     def train_epoch(self):
         self.scheduler.step()
@@ -130,25 +136,25 @@ class Trainer:
 
         # Set the mode of the model to trainer, then the parameters can begin to be trained
         self.model.train()
-        for i, (data, rotation_label, class_label) in enumerate(self.train_data_loader):
-            data, rotation_label, class_label = data.to(self.device), rotation_label.to(self.device), class_label.to(self.device)
+        for i, (data, n, c_l) in enumerate(self.train_data_loader):
+            data, n, c_l = data.to(self.device), n.to(self.device), c_l.to(self.device)
             self.optimizer.zero_grad()
 
-            rotation_predict_label, class_predict_label = self.model(data)  # , lambda_val=lambda_val)
-            unsupervised_task_loss = criterion(rotation_predict_label, rotation_label)
-            supervised_task_loss = criterion(class_predict_label[rotation_label == 0], class_label[rotation_label == 0])
+            n_logit, c_l_logit = self.model(data)  # , lambda_val=lambda_val)
+            usv_loss = criterion(n_logit, n)
+            sv_loss = criterion(c_l_logit[n == 0], c_l[n == 0])
 
-            _, cls_pred = class_predict_label.max(dim=1)
-            _, jig_pred = rotation_predict_label.max(dim=1)
+            _, c_l_pred = c_l_logit.max(dim=1)
+            _, usv_pred = n_logit.max(dim=1)
             # _, domain_pred = domain_logit.max(dim=1)
-            loss = supervised_task_loss + unsupervised_task_loss * self.args.unsupervised_task_weight
+            loss = sv_loss + usv_loss * self.args.usvt_weight
 
             loss.backward()
             self.optimizer.step()
 
             # record and print
-            acc_class = torch.sum(cls_pred == class_label).item() / data.shape[0]
-            acc_r = torch.sum(jig_pred == rotation_label).item() / data.shape[0]
+            acc_class = torch.sum(c_l_pred == c_l).item() / data.shape[0]
+            acc_u = torch.sum(usv_pred == n).item() / data.shape[0]
             if i == 0:
                 col_n = ceil(len(self.train_data_loader) / self.collect_per_batch)
                 print(f'epoch:{self.cur_epoch}/{self.args.epochs};bs:{data.shape[0]};'
@@ -157,25 +163,25 @@ class Trainer:
             if i % self.collect_per_batch == 0:
                 print('#', end='')
                 wandb.log({'train/acc_class': acc_class,
-                            'train/acc_r': acc_r,
-                            'train/loss_class': supervised_task_loss.item(),
-                            'train/loss_u': unsupervised_task_loss.item(),
+                            'train/acc_u': acc_u,
+                            'train/loss_class': sv_loss.item(),
+                            'train/loss_u': usv_loss.item(),
                             'train/loss': loss.item(),
                             'train/epoch': self.cur_epoch,
                             'train/num_batch': i+self.cur_epoch*len(self.train_data_loader)})
                 # self.recorder.train.append({
                 #     'acc_class': acc_class,
                 #     'acc_r': acc_r,
-                #     'loss_class': supervised_task_loss.item(),
-                #     'loss_u': unsupervised_task_loss.item(),
+                #     'loss_class': sv_loss.item(),
+                #     'loss_u': usv_loss.item(),
                 #     'loss': loss.item(),
                 #     'epoch': self.cur_epoch,
                 #     'num_batch': i})
 
             if i == len(self.train_data_loader) - 1:
                 print()
-                pp([f'train_acc:u:{acc_class};c:{acc_r}'
-                    f'train_loss:j:{unsupervised_task_loss.item()};c:{supervised_task_loss.item()}'])
+                pp([f'train_acc:u:{acc_class};c:{acc_u}'
+                    f'train_loss:j:{usv_loss.item()};c:{sv_loss.item()}'])
 
                 # if self.cur_epoch % self.save_model_per_epoch == 0:
                 #     self.recorder.model.append({
@@ -185,7 +191,7 @@ class Trainer:
                 #     print(self.recorder.model.params[0]['conv1.weight'][0])
                 #     print()
 
-            del loss, supervised_task_loss, unsupervised_task_loss, rotation_predict_label, class_predict_label
+            del loss, sv_loss, usv_loss, n_logit, c_l_logit
 
         # eval
         self.model.eval()
@@ -193,7 +199,7 @@ class Trainer:
             for phase, loader in self.test_loaders.items():
                 l_acc, _ = Trainer.test(self.model, loader, device=self.device)
                 pp(f'{phase}_acc:c:{l_acc}')
-                wandb.log({f'{phase}/_acc': l_acc,
+                wandb.log({f'{phase}/acc': l_acc,
                         f'{phase}/epoch': self.cur_epoch})
                 self.results[phase][self.cur_epoch] = l_acc
 
@@ -202,12 +208,12 @@ class Trainer:
         label_correct = 0
         n_correct = 0
         total = len(loader.dataset)
-        for _, (data, n, label) in enumerate(loader):
-            data, n, label = data.to(device), n.to(device), label.to(device)
-            n_logit, l_logit = model(data)
-            _, l_pred = l_logit.max(dim=1)
+        for _, (data, n, c_l) in enumerate(loader):
+            data, n, c_l = data.to(device), n.to(device), c_l.to(device)
+            n_logit, c_l_logit = model(data)
+            _, c_l_pred = c_l_logit.max(dim=1)
             _, n_pred = n_logit.max(dim=1)
-            label_correct += torch.sum(l_pred == label).item()
+            label_correct += torch.sum(c_l_pred == c_l).item()
             n_correct += torch.sum(n_pred == n).item()
         return float(label_correct)/total, float(n_correct)/total
 
@@ -216,7 +222,7 @@ def iterate_args(args):
     args_list = list()
     for params in args.parameters:
         args.params = params
-        args.unsupervised_task_weight = params[0]
+        args.usvt_weight = params[0]
         args.original_img_prob = params[1]
 
         s2ts = ms2st(args.domains, args.targets)
@@ -226,7 +232,6 @@ def iterate_args(args):
             for i in range(int(args.repeat_times)):
                 args.nth_repeat = i
                 args_list.append(copy.deepcopy(args))
-
     return args_list
 
 
@@ -240,8 +245,8 @@ def main():
         '_'.join([str(_) for _ in args.params])+'/'
         if args.nth_repeat==0:
             wandb.init(project=args.experiment, dir=dirname(__file__), config=args,
-                       tags=[args.network, "-".join([str(_) for _ in args.params])],
-                       name=f'{args.source[0]}_{args.target}')
+                       tags=[args.network, f'{args.source[0]}-{args.target}'],
+                       name="-".join([str(_) for _ in args.params]))
         writer = Writer(
             output_dir=output_dir,
             file=f'{args.source[0]}_{args.target}'
@@ -249,14 +254,13 @@ def main():
         if args.redirect_to_file and args.redirect_to_file != 'null':
             print('redirect to ', output_dir+args.redirect_to_file)
             sys.stdout = open(output_dir+args.redirect_to_file, 'a')
-        model = get_model(args.network,
-                          num_usv_classes=args.num_usv_classes,
-                          num_classes=args.num_classes)
+        model = model_fns[args.network](
+            num_usv_classes=args.num_usv_classes,
+            num_classes=args.num_classes)
         wandb.watch(model, log='all')
-        is_patch_based_or_not = model.is_patch_based()
         data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
                                            args.original_img_prob, args.batch_size,
-                                           args.max_num_s_img)
+                                           args.max_num_s_img, args)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
         Trainer(args, model, data_loaders, optimizer, scheduler, writer)

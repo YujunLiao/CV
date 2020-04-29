@@ -1,4 +1,4 @@
-from dl.data_loader.utils import get_p_l
+from dl.data_loader.utils.get_p_l import get_p_l
 from dl.dataset import BaseDataset
 
 import torchvision.transforms as transforms

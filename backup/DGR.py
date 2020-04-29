@@ -11,7 +11,7 @@ import warnings
 
 
 from torch.utils.data import Dataset
-from dl.data_loader.utils import get_p_l
+from dl.data_loader.utils.get_p_l import get_p_l
 
 
 class DARotationDataset():
