@@ -10,7 +10,6 @@ from torch import optim
 from torch import nn
 import argparse
 import wandb
-from dl.model.model import get_model
 from dl.data_loader.dgr import get_DGR_data_loader
 from dl.optimizer import  get_optimizer
 from dl.utils.writer import Writer
@@ -60,6 +59,7 @@ def get_args():
     parser.add_argument("--output_dir", default=f'{dirname(__file__)}/output/')
     parser.add_argument("--redirect_to_file", default='null')
     parser.add_argument("--experiment", default='DG_rot')
+    parser.add_argument("--wandb", default=False, action='store_true')
 
     parser.add_argument("--classify_only_original_img", type=bool, default=True)
     parser.add_argument("--max_num_s_img", default=500, type=int)
@@ -161,7 +161,7 @@ class Trainer:
                 print(f'epoch:{self.cur_epoch}/{self.args.epochs};bs:{data.shape[0]};'
                       f'lr:{" ".join([str(lr) for lr in lrs])}; '
                       f'{len(self.train_data_loader)}/{self.collect_per_batch}={col_n}|', end='')
-            if i % self.collect_per_batch == 0:
+            if self.args.wandb and self.args.nth_repeat == 0 and i % self.collect_per_batch == 0:
                 print('#', end='')
                 wandb.log({'acc/train/sv_task': acc_class,
                             'acc/train/usv_task': acc_u,
@@ -198,7 +198,8 @@ class Trainer:
             for phase, loader in self.test_loaders.items():
                 l_acc, _ = Trainer.test(self.model, loader, device=self.device)
                 pp(f'{phase}_acc:c:{l_acc}')
-                wandb.log({f'acc/{phase}/sv_task': l_acc})
+                if self.args.wandb and self.args.nth_repeat == 0:
+                    wandb.log({f'acc/{phase}/sv_task': l_acc})
                 self.results[phase][self.cur_epoch] = l_acc
 
     @staticmethod
@@ -241,11 +242,6 @@ def main():
     for args in iterate_args(args):
         output_dir = f'{args.output_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/' + \
         '_'.join([str(_) for _ in args.params])+'/'
-        if args.nth_repeat==0:
-            tags = [args.source[0]+'_'+args.target, "_".join([str(_) for _ in args.params])]
-            wandb.init(project=f'{args.experiment}_{args.network}', tags=tags,
-                       dir=dirname(__file__), config=args,
-                       name=f'{"-".join([str(_) for _ in args.params])}-{args.source[0]}-{args.target}')
         writer = Writer(
             output_dir=output_dir,
             file=f'{args.source[0]}_{args.target}'
@@ -256,14 +252,24 @@ def main():
         model = model_fns[args.network](
             num_usv_classes=args.num_usv_classes,
             num_classes=args.num_classes)
-        wandb.watch(model, log='all')
+        if args.wandb and args.nth_repeat == 0:
+            tags = [args.source[0] + '_' + args.target, "_".join([str(_) for _ in args.params])]
+            wandb.init(project=f'{args.experiment}_{args.network}', tags=tags,
+                       dir=dirname(__file__), config=args,
+                       name=f'{"-".join([str(_) for _ in args.params])}-{args.source[0]}-{args.target}')
+
+            wandb.watch(model, log='all')
         data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
                                            args.original_img_prob, args.batch_size,
                                            args.max_num_s_img, args)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
         Trainer(args, model, data_loaders, optimizer, scheduler, writer)
-        wandb.join()
+
+        # torch.save(model.state_dict(), args.data_dir+'/cache/model.pkl')
+        # wandb.save(args.data_dir+'/cache/model.pkl')
+        if args.wandb and args.nth_repeat == 0:
+            wandb.join()
 
 if __name__ == "__main__":
     main()
