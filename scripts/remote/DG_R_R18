@@ -10,9 +10,9 @@ CUDA_VISIBLE_DEVICES=$1 \
 /home/giorgio/Files/pycharm_project/pytorch_interpreter/bin/python3.7 -u \
 /home/giorgio/Files/pycharm_project/CV/trainer.py \
 --redirect_to_file null \
---parameters 0,1 \
+--parameters 0.8,0.625 \
 --domains art_painting cartoon sketch photo \
---targets art_painting    \
+--targets cartoon    \
 --num_classes 7 \
 --repeat_times 1 \
 --network resnet18  --epochs 30 \

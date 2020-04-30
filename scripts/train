@@ -1,11 +1,14 @@
 # /bin/bash scripts/train_r
 # project_path=\$HOME/Files/pycharm_project/DG_rotation/;
 # script=\${project_path}scripts/DG_R_R18;
+
+# /bin/bash $HOME/Files/pycharm_project/CV/scripts/remote/DG_R_caffe 0
+
 ssh -t local "
 project_path=\$HOME/Files/pycharm_project/CV/
 script=\${project_path}scripts/remote/DG_R_R18
 # script=\${project_path}scripts/remote/DG_R_caffe
-GPU=1
+GPU=0
 
 echo \$(date)
 echo "GPU \$GPU"
@@ -15,4 +18,6 @@ echo "script \$script"
 # nohup /bin/bash \$script \$GPU
 # bash -i;
 "
+
+#
 

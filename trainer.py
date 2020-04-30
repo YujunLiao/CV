@@ -1,4 +1,5 @@
 import copy
+import os
 import sys
 from os.path import dirname
 from time import time, strftime, localtime
@@ -162,13 +163,11 @@ class Trainer:
                       f'{len(self.train_data_loader)}/{self.collect_per_batch}={col_n}|', end='')
             if i % self.collect_per_batch == 0:
                 print('#', end='')
-                wandb.log({'acc/train_class': acc_class,
-                            'acc/train_u': acc_u,
-                            'loss/train_class': sv_loss.item(),
-                            'loss/train_u': usv_loss.item(),
-                            'loss/train': loss.item(),
-                            'epoch_train': self.cur_epoch,
-                            'num_batch_train': i+self.cur_epoch*len(self.train_data_loader)})
+                wandb.log({'acc/train/sv_task': acc_class,
+                            'acc/train/usv_task': acc_u,
+                            'loss/train/class': sv_loss.item(),
+                            'loss/train/usv_task': usv_loss.item(),
+                            'loss/train/sum': loss.item()})
                 # self.recorder.train.append({
                 #     'acc_class': acc_class,
                 #     'acc_r': acc_r,
@@ -199,8 +198,7 @@ class Trainer:
             for phase, loader in self.test_loaders.items():
                 l_acc, _ = Trainer.test(self.model, loader, device=self.device)
                 pp(f'{phase}_acc:c:{l_acc}')
-                wandb.log({f'acc/{phase}_class': l_acc,
-                        f'epoch_{phase}': self.cur_epoch})
+                wandb.log({f'acc/{phase}/sv_task': l_acc})
                 self.results[phase][self.cur_epoch] = l_acc
 
     @staticmethod
@@ -244,9 +242,9 @@ def main():
         output_dir = f'{args.output_dir}/{socket.gethostname()}/{args.experiment}/{args.network}/' + \
         '_'.join([str(_) for _ in args.params])+'/'
         if args.nth_repeat==0:
-            tags = [f'{args.source[0]}-{args.target}', f'{"-".join([str(_) for _ in args.params])}']
-            wandb.init(project=f'{args.experiment}_{args.network}',
-                       dir=dirname(__file__), config=args, tags=tags,
+            tags = [args.source[0]+'_'+args.target, "_".join([str(_) for _ in args.params])]
+            wandb.init(project=f'{args.experiment}_{args.network}', tags=tags,
+                       dir=dirname(__file__), config=args,
                        name=f'{"-".join([str(_) for _ in args.params])}-{args.source[0]}-{args.target}')
         writer = Writer(
             output_dir=output_dir,

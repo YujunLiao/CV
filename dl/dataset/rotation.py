@@ -36,7 +36,7 @@ class RotTrain(Rotation):
     def __getitem__(self, index):
         img, n, label = super().__getitem__(index)
         img = train_tf_fn(self.args)(img)
-        img = tile_tf_fn(img)
+        img = tile_tf_fn(self.args)(img)
         img_t = norm_tf_fn(img)
         return img_t, n, label
 
