@@ -1,5 +1,5 @@
-from dl.data_loader.utils.ds2dl import train_DL_fn, test_DL_fn
-from dl.data_loader.utils.get_p_l import get_p_l
+from .utils.ds2dl import train_DL_fn, test_DL_fn
+from .utils.get_p_l import get_p_l
 from ..dataset.rotation import RotTrain, RotTest
 
 

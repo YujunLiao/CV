@@ -1,6 +1,8 @@
 import torchvision.transforms as tf
 
 def train_tf_fn(args):
+    if args is None:
+        return lambda x:x
     tf_fns = []
     tf_fns.append(tf.RandomResizedCrop(
         (args.image_size, args.image_size),
@@ -19,19 +21,23 @@ def train_tf_fn(args):
 
 
 def test_tf_fn(args):
+    if args is None:
+        return lambda x:x
     tf_fns = []
     tf_fns.append(tf.Resize((args.image_size, args.image_size)))
     return tf.Compose(tf_fns)
 
 
 def tile_tf_fn(args):
+    if args is None:
+        return lambda x:x
     tf_fns = []
     if args.tile_random_grayscale:
         tf_fns.append(tf.RandomGrayscale(args.tile_random_grayscale))
     return tf.Compose(tf_fns)
 
-norm_tf_fn = tf.Compose([
-    tf.ToTensor(),
-    tf.Normalize([0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
+
+to_t_tf_fn = tf.ToTensor()
+to_i_tf_fn = tf.ToPILImage()
+norm_tf_fn = tf.Normalize([0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
