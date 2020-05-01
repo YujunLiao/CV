@@ -3,6 +3,9 @@ import torch.utils.data as data
 
 
 class BaseDataset(data.Dataset):
+    """:return A PIL image with specified size
+
+    """
     def __init__(self, paths, labels, _max=-1):
         super().__init__()
         if _max != -1 and len(paths) > _max:

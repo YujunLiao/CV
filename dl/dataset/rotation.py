@@ -4,6 +4,9 @@ from.tf_fn import train_tf_fn, test_tf_fn, tile_tf_fn, norm_tf_fn, to_t_tf_fn, t
 
 
 class Rotation(BaseDataset):
+    """Return tensor image with nothing change
+
+    """
     def __init__(self, paths='', labels='', prob=float(0), _max=-1):
         super().__init__(paths, labels, _max)
         self.prob = prob
@@ -30,6 +33,9 @@ class Rotation(BaseDataset):
 
 
 class RotTrain(Rotation):
+    """Return tensor image with resize, normalize and other transform.
+
+    """
     def __init__(self, paths='', labels='', prob=float(0), _max=-1, args=None):
         super().__init__(paths, labels, prob, _max)
         self.args = args
@@ -45,6 +51,9 @@ class RotTrain(Rotation):
 
 
 class RotTest(Rotation):
+    """Return tensor image with resize and normalize.
+
+    """
     def __init__(self, paths='', labels='', prob=float(0), _max=-1, args=None):
         super().__init__(paths, labels, prob, _max)
         self.args = args
@@ -58,6 +67,9 @@ class RotTest(Rotation):
         return img_t, n, label
 
 class Rot(Rotation):
+    """Return tensor image with resize.
+
+    """
     def __init__(self, paths='', labels='', prob=float(0), _max=-1, args=None):
         super().__init__(paths, labels, prob, _max)
         self.args = args

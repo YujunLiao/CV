@@ -52,6 +52,7 @@ def get_args():
     parser.add_argument("--image_size", type=int, default=222)
     parser.add_argument("--val_size", type=float, default="0.1")
     parser.add_argument("--collect_per_batch", type=int, default=5)
+    parser.add_argument("--margin", type=int, default=20)
 
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
@@ -59,7 +60,7 @@ def get_args():
                         default=f'{dirname(__file__)}/data/')
     parser.add_argument("--output_dir", default=f'{dirname(__file__)}/output/')
     parser.add_argument("--redirect_to_file", default='null')
-    parser.add_argument("--experiment", default='DG_rot')
+    parser.add_argument("--experiment", default='DG_irot')
     parser.add_argument("--wandb", default=False, action='store_true')
 
     parser.add_argument("--classify_only_original_img", type=bool, default=True)
@@ -244,7 +245,10 @@ def main():
                        name=f'{"-".join([str(_) for _ in args.params])}-{args.source[0]}-{args.target}')
 
             wandb.watch(model, log='all')
-        data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
+        # data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
+        #                                    args.original_img_prob, args.batch_size,
+        #                                    args.max_num_s_img, args)
+        data_loaders = get_DGIR_data_loader(args.source, args.target, args.data_dir, args.val_size,
                                            args.original_img_prob, args.batch_size,
                                            args.max_num_s_img, args)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
