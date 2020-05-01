@@ -6,6 +6,7 @@ from dl.dataset.rotation import Rotation, RotTest
 from dl.data_loader.utils.get_p_l import get_p_l
 from dl.model.caffenet import caffenet
 from torchvision.transforms import transforms as tf
+from torchvision import utils as vutils
 
 import wandb
 from dl.data_loader.utils.ds2dl import test_DL_fn
@@ -23,12 +24,13 @@ print('what', dirname(__file__))
 model.load_state_dict(torch.load('/home/lyj/Files/project/pycharm/CV/data/cache/model.pkl', map_location=device))
 
 paths_1, paths_2, labels_1, labels_2 = get_p_l()
-ds = RotTest(paths_1, labels_1, prob=1)
-dl = test_DL_fn(ds, 4)
+ds = RotTest(paths_1, labels_1, prob=1, args=args)
+dl = test_DL_fn(ds, 10)
 
 for i, (imgs_t, _, _) in enumerate(dl):
+    img_grid = vutils.make_grid(imgs_t, normalize=True, scale_each=True, nrow=1)
+    wandb.log({'original_img': [wandb.Image(tf.ToPILImage()(img_grid))]})
     model.eval()
-    wandb.log({'original_img': [wandb.Image(tf.ToPILImage()(i)) for i in imgs_t]})
     vis.feature_map(model, imgs_t, wandb)
     break
 

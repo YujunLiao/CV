@@ -168,27 +168,11 @@ class Trainer:
                             'loss/train/class': sv_loss.item(),
                             'loss/train/usv_task': usv_loss.item(),
                             'loss/train/sum': loss.item()})
-                # self.recorder.train.append({
-                #     'acc_class': acc_class,
-                #     'acc_r': acc_r,
-                #     'loss_class': sv_loss.item(),
-                #     'loss_u': usv_loss.item(),
-                #     'loss': loss.item(),
-                #     'epoch': self.cur_epoch,
-                #     'num_batch': i})
 
             if i == len(self.train_data_loader) - 1:
                 print()
                 pp([f'train_acc:u:{acc_class};c:{acc_u}'
                     f'train_loss:j:{usv_loss.item()};c:{sv_loss.item()}'])
-
-                # if self.cur_epoch % self.save_model_per_epoch == 0:
-                #     self.recorder.model.append({
-                #         'params': self.model.state_dict(),
-                #         'epoch': self.cur_epoch,
-                #         'num_batch': i})
-                #     print(self.recorder.model.params[0]['conv1.weight'][0])
-                #     print()
 
             del loss, sv_loss, usv_loss, n_logit, c_l_logit
 

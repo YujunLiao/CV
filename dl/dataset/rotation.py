@@ -54,6 +54,19 @@ class RotTest(Rotation):
         img = to_i_tf_fn(img_t)
         img = test_tf_fn(self.args)(img)
         img_t = to_t_tf_fn(img)
+        img_t = norm_tf_fn(img_t)
+        return img_t, n, label
+
+class Rot(Rotation):
+    def __init__(self, paths='', labels='', prob=float(0), _max=-1, args=None):
+        super().__init__(paths, labels, prob, _max)
+        self.args = args
+
+    def __getitem__(self, index):
+        img_t, n, label = super().__getitem__(index)
+        img = to_i_tf_fn(img_t)
+        img = test_tf_fn(self.args)(img)
+        img_t = to_t_tf_fn(img)
         # img_t = norm_tf_fn(img_t)
         return img_t, n, label
 
