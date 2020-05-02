@@ -41,14 +41,14 @@ def get_args():
                         default=['art_painting', 'cartoon', 'sketch', 'photo'])
     parser.add_argument("--targets", nargs='+', default=['art_painting'])
     parser.add_argument("--repeat_times", type=int, default=1)
-    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.25, 10]],
+    parser.add_argument("--parameters", nargs='+', default=[[0.5, 1, 10]],
                         type=lambda params:[float(_) for _ in params.split(',')])
 
 
     parser.add_argument("--usvt_weight", type=float)
     parser.add_argument("--original_img_prob", default=None, type=float)
     parser.add_argument("--epochs", "-e", type=int, default=2)
-    parser.add_argument("--batch_size", "-b", type=int, default=128)
+    parser.add_argument("--batch_size", "-b", type=int, default=32)
     parser.add_argument("--learning_rate", "-l", type=float, default=.01)
     parser.add_argument("--image_size", type=int, default=222)
     parser.add_argument("--val_size", type=float, default="0.1")
@@ -65,7 +65,7 @@ def get_args():
     parser.add_argument("--wandb", default=False, action='store_true')
 
     parser.add_argument("--classify_only_original_img", type=bool, default=True)
-    parser.add_argument("--max_num_s_img", default=500, type=int)
+    parser.add_argument("--max_num_s_img", default=100, type=int)
     parser.add_argument("--max_num_t_img", default=-1, type=int)
     parser.add_argument("--train_all_param", default=True, type=bool)
     parser.add_argument("--nesterov", default=False, action='store_true')
@@ -132,7 +132,7 @@ class Trainer:
         r.val_u_best = self.results["val_us"].max()
         r.test_u_best = self.results["test_us"].max()
         r.test_u_select = self.results["test_us"][r.v_u_b_i]
-        r.u_when_s = self.results["test_us"][r.v_s_b_i]
+        r.s_when_u = self.results["test_s"][r.v_u_b_i]
 
         r.v_s_means = self.results["val_s"].mean()
         r.t_s_means = self.results["test_s"].mean()
@@ -294,10 +294,11 @@ def main():
         if args.wandb:
             tags = [args.source[0] + '_' + args.target, "_".join([str(_) for _ in args.params])]
             wandb.init(project=f'{args.experiment}_{args.network}', tags=tags,
-                       dir=dirname(__file__), config=args,
+                       dir=dirname(__file__), config=args, reinit=True,
                        name=f'{"-".join([str(_) for _ in args.params])}-{args.source[0]}-{args.target}')
 
             wandb.watch(model, log='all')
+
         # data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
         #                                    args.original_img_prob, args.batch_size,
         #                                    args.max_num_s_img, args)
