@@ -1,9 +1,11 @@
+from math import floor
 from .base import BaseDataset
 from .base import BaseDataset
 from.tf_fn import train_tf_fn, test_tf_fn, tile_tf_fn, norm_tf_fn, to_t_tf_fn, to_i_tf_fn
 import numpy as np
 import torch
 import torchvision.transforms as tf
+
 
 
 def filter_mat(size=227, margin=10, inside=1):
@@ -18,6 +20,30 @@ def filter_mat(size=227, margin=10, inside=1):
     if margin == 0:
         mat = torch.ones((size, size))
     mat[margin:-margin, margin:-margin] = 1
+    if inside == 0:
+        mat = torch.ones((size, size)) - mat
+    return mat
+
+
+def filter_mat4(size=227, margin=10, inside=1):
+    """
+
+    :param inside:
+    :param size:
+    :param margin:
+    :return:
+    """
+    # wide of internal square
+    wide = floor((size-3*margin)/2)
+    assert wide > 0
+    mat = torch.zeros((size, size))
+    if margin == 0:
+        mat = torch.ones((size, size))
+    else:
+        mat[margin:margin+wide, margin:margin+wide] = 1
+        mat[margin:margin+wide, 2*margin+wide:-margin] = 1
+        mat[2*margin+wide:-margin, margin:margin+wide] = 1
+        mat[2*margin+wide:-margin, 2*margin+wide:-margin] = 1
     if inside == 0:
         mat = torch.ones((size, size)) - mat
     return mat
@@ -38,7 +64,7 @@ class InternalRot(BaseDataset):
         return to_t_tf_fn(img), n, label
 
     @staticmethod
-    def rotate(img, prob=float(0), margin=20):
+    def rotate(img, prob=float(0), margin=20, fm=filter_mat4):
         """
 
         :param margin:
@@ -48,9 +74,9 @@ class InternalRot(BaseDataset):
 
         """
         img_t = tf.ToTensor()(img)
-        img_in_t = img_t * filter_mat(size=img_t.shape[1],
+        img_in_t = img_t * fm(size=img_t.shape[1],
                                       margin=margin, inside=1)
-        img_out_t = img_t * filter_mat(size=img_t.shape[1],
+        img_out_t = img_t * fm(size=img_t.shape[1],
                                        margin=margin, inside=0)
 
         img_in = tf.ToPILImage()(img_in_t)

@@ -42,7 +42,7 @@ def get_args():
                         default=['cartoon'])
     parser.add_argument("--targets", nargs='+', default=['art_painting'])
     parser.add_argument("--repeat_times", type=int, default=1)
-    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.01, 0],[0.5, 0.75, 10]],
+    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.01, 20],[0.5, 0.75, 10]],
                         type=lambda params:[float(_) for _ in params.split(',')])
 
 
