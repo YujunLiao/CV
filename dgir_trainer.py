@@ -141,12 +141,17 @@ class Trainer:
         pp(temp_dict)
         self.writer.w(temp_dict)
         if self.args.wandb and self.args.nth_repeat == 0:
-            table = wandb.Table(columns=[
-                f'{self.args.source[0]}->{self.args.target}-{"_".join(self.args.params)}',
-                "val_best", "test_best", "test_select"])
-            table.add_data("epoch", v_b_i, t_b_i, "#")
-            table.add_data("acc", val_best.item(), test_best.item(), test_select.item())
-            wandb.log({"summary": table})
+            wandb.log({'r/test_select': test_select.item(),
+                        'r/val_best': val_best.item(),
+                       'r/test_best': test_best.item(),
+                       'r/v_b_i': v_b_i,
+                       'r/t_bi': t_b_i})
+            # table = wandb.Table(columns=[
+            #     f'{self.args.source[0]}->{self.args.target}-{"-".join([str(_) for _ in self.args.params])}',
+            #     "val_best", "test_best", "test_select"])
+            # table.add_data("epoch", v_b_i, t_b_i, "#")
+            # table.add_data("acc", val_best.item(), test_best.item(), test_select.item())
+            # wandb.log({"summary": table})
 
     def train_epoch(self):
         self.scheduler.step()
