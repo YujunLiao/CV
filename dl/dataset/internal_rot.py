@@ -15,6 +15,8 @@ def filter_mat(size=227, margin=10, inside=1):
     :return:
     """
     mat = torch.zeros((size, size))
+    if margin == 0:
+        mat = torch.ones((size, size))
     mat[margin:-margin, margin:-margin] = 1
     if inside == 0:
         mat = torch.ones((size, size)) - mat

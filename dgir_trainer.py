@@ -18,6 +18,7 @@ from dl.utils.s2t import ms2st, ss2st
 from dl.utils.pp import pretty_print as pp
 from dl.model import caffenet, resnet, mnist
 from dl.utils.result import Result
+from torchvision import transforms as tf
 
 model_fns = {
     'caffenet': caffenet.caffenet,
@@ -38,10 +39,10 @@ def get_args():
     parser.add_argument("--num_usv_classes", type=int, default=4)
 
     parser.add_argument("--domains", nargs='+',
-                        default=['art_painting', 'cartoon', 'sketch', 'photo'])
+                        default=['cartoon'])
     parser.add_argument("--targets", nargs='+', default=['art_painting'])
     parser.add_argument("--repeat_times", type=int, default=1)
-    parser.add_argument("--parameters", nargs='+', default=[[0.5, 1, 10]],
+    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.01, 0],[0.5, 0.75, 10]],
                         type=lambda params:[float(_) for _ in params.split(',')])
 
 
