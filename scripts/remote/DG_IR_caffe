@@ -13,7 +13,7 @@ CUDA_VISIBLE_DEVICES=$1 \
 /home/giorgio/Files/pycharm_project/pytorch_interpreter/bin/python3.7 -u \
 /home/giorgio/Files/pycharm_project/CV/dgir_trainer.py \
 --redirect_to_file null \
---parameters  0.5,0.25,30 \
+--parameters  0.5,0.25,0 \
 --domains cartoon  \
 --targets art_painting    \
 --num_classes 7 \

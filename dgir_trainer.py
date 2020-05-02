@@ -17,6 +17,7 @@ from dl.utils.writer import Writer
 from dl.utils.s2t import ms2st, ss2st
 from dl.utils.pp import pretty_print as pp
 from dl.model import caffenet, resnet, mnist
+from dl.utils.result import Result
 
 model_fns = {
     'caffenet': caffenet.caffenet,
@@ -118,11 +119,31 @@ class Trainer:
         for self.cur_epoch in range(self.args.epochs):
             self.train_epoch()
 
-        v_b_i = self.results["val_s"].argmax()
-        t_b_i = self.results["test_s"].argmax()
-        val_best = self.results["val_s"].max()
-        test_best = self.results["test_s"].max()
-        test_select = self.results["test_s"][v_b_i]
+        r = Result()
+        r.v_s_b_i = self.results["val_s"].argmax()
+        r.t_s_b_i = self.results["test_s"].argmax()
+        r.val_s_best = self.results["val_s"].max()
+        r.test_s_best = self.results["test_s"].max()
+        r.test_s_select = self.results["test_s"][r.v_s_b_i]
+        r.u_when_s = self.results["test_us"][r.v_s_b_i]
+
+        r.v_u_b_i = self.results["val_us"].argmax()
+        r.t_u_b_i = self.results["test_us"].argmax()
+        r.val_u_best = self.results["val_us"].max()
+        r.test_u_best = self.results["test_us"].max()
+        r.test_u_select = self.results["test_us"][r.v_u_b_i]
+        r.u_when_s = self.results["test_us"][r.v_s_b_i]
+
+        r.v_s_means = self.results["val_s"].mean()
+        r.t_s_means = self.results["test_s"].mean()
+        r.v_u_means = self.results["val_us"].mean()
+        r.t_u_means = self.results["test_us"].mean()
+
+        r.v_s_std = self.results["val_s"].std()
+        r.t_s_std = self.results["test_s"].std()
+        r.v_u_std = self.results["val_us"].std()
+        r.t_u_std = self.results["test_us"].std()
+
 
         # print("Best val %g, corresponding test %g - best test: %g" % (val_res.max(), test_res[idx_best], test_res.max()))
         temp_dict = {
@@ -132,20 +153,22 @@ class Trainer:
             'param':self.args.params,
             'bs': self.args.batch_size,
             'lr': self.args.learning_rate,
-            'Highest accuracy on validation set appears on epoch': t_b_i.item(),
-            'Highest accuracy on test set appears on epoch': v_b_i.item(),
-            'Accuracy on test set when the accuracy on validation set is highest': test_select.item(),
-            'Highest accuracy on test set': test_best.item(),
+            'Highest accuracy on validation set appears on epoch': r.t_s_b_i.item(),
+            'Highest accuracy on test set appears on epoch': r.v_s_b_i.item(),
+            'Accuracy on test set when the accuracy on validation set is highest': r.test_s_select.item(),
+            'Highest accuracy on test set': r.test_s_best.item(),
             'duration': time() - start_time
         }
         pp(temp_dict)
+        pp(vars(r))
         self.writer.w(temp_dict)
-        if self.args.wandb and self.args.nth_repeat == 0:
-            wandb.log({'r/test_select': test_select.item(),
-                        'r/val_best': val_best.item(),
-                       'r/test_best': test_best.item(),
-                       'r/v_b_i': v_b_i,
-                       'r/t_bi': t_b_i})
+        if self.args.wandb:
+            # wandb.log({'r/test_select': test_s_select.item(),
+            #             'r/val_best': val_s_best.item(),
+            #            'r/test_best': test_s_best.item(),
+            #            'r/v_b_i': v_s_b_i,
+            #            'r/t_bi': t_s_b_i})
+            wandb.log(vars(r))
             # table = wandb.Table(columns=[
             #     f'{self.args.source[0]}->{self.args.target}-{"-".join([str(_) for _ in self.args.params])}',
             #     "val_best", "test_best", "test_select"])
@@ -186,7 +209,7 @@ class Trainer:
                       f'{len(self.train_data_loader)}/{self.collect_per_batch}={col_n}|', end='')
             if i % self.collect_per_batch == 0:
                 print('#', end='')
-                if self.args.wandb and self.args.nth_repeat == 0:
+                if self.args.wandb:
                     wandb.log({'acc/train/sv_task': acc_s,
                                 'acc/train/usv_task': acc_u,
                                 'loss/train/class': s_loss.item(),
@@ -206,14 +229,14 @@ class Trainer:
             for phase, loader in self.test_s_loaders.items():
                 s_acc, us_acc = Trainer.test(self.model, loader, device=self.device)
                 pp(f'{phase}_acc:{s_acc}')
-                if self.args.wandb and self.args.nth_repeat == 0:
+                if self.args.wandb:
                     wandb.log({f'acc/{phase}': s_acc})
                 self.results[phase][self.cur_epoch] = s_acc
 
             for phase, loader in self.test_us_loaders.items():
                 s_acc, us_acc = Trainer.test(self.model, loader, device=self.device)
                 pp(f'{phase}_acc:{us_acc}')
-                if self.args.wandb and self.args.nth_repeat == 0:
+                if self.args.wandb:
                     wandb.log({f'acc/{phase}': us_acc})
                 self.results[phase][self.cur_epoch] = us_acc
 
@@ -268,7 +291,7 @@ def main():
         model = model_fns[args.network](
             num_usv_classes=args.num_usv_classes,
             num_classes=args.num_classes)
-        if args.wandb and args.nth_repeat == 0:
+        if args.wandb:
             tags = [args.source[0] + '_' + args.target, "_".join([str(_) for _ in args.params])]
             wandb.init(project=f'{args.experiment}_{args.network}', tags=tags,
                        dir=dirname(__file__), config=args,
@@ -287,7 +310,7 @@ def main():
 
         # torch.save(model.state_dict(), args.data_dir+'/cache/model.pkl')
         # wandb.save(args.data_dir+'/cache/model.pkl')
-        if args.wandb and args.nth_repeat == 0:
+        if args.wandb:
             wandb.join()
 
 if __name__ == "__main__":
