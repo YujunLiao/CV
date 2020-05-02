@@ -12,10 +12,16 @@ def get_DGIR_data_loader(sources='', target='', data_dir='', val_size=float(0),
     # dataset
     train_DS = InternalRotTrain(train_paths, train_labels, prob=prob, _max=_max,
                                 args=args, img_size=args.image_size, margin=args.margin)
-    val_DS = InternalRotTest(val_paths, val_labels, prob=1, _max=_max,
+    val_s_DS = InternalRotTest(val_paths, val_labels, prob=1, _max=_max,
                              args=args, img_size=args.image_size, margin=args.margin)
-    test_DS = InternalRotTest(test_paths, test_labels, prob=1, _max=_max,
-                              args=args, img_size=args.image_size, margin=args.margin)
+    val_us_DS = InternalRotTest(val_paths, val_labels, prob=0.25, _max=_max,
+                               args=args, img_size=args.image_size, margin=args.margin)
 
-    return train_DL_fn(train_DS, batch_size), test_DL_fn(val_DS, batch_size),\
-           test_DL_fn(test_DS, batch_size)
+    test_s_DS = InternalRotTest(test_paths, test_labels, prob=1, _max=_max,
+                              args=args, img_size=args.image_size, margin=args.margin)
+    test_us_DS = InternalRotTest(test_paths, test_labels, prob=0.25, _max=_max,
+                                args=args, img_size=args.image_size, margin=args.margin)
+
+    return train_DL_fn(train_DS, batch_size),\
+           test_DL_fn(val_s_DS, batch_size), test_DL_fn(val_us_DS, batch_size),\
+           test_DL_fn(test_s_DS, batch_size), test_DL_fn(test_us_DS, batch_size)
