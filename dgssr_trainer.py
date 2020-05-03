@@ -11,7 +11,7 @@ from torch import nn
 import argparse
 import wandb
 from dl.data_loader.dgr import get_DGR_data_loader
-from dl.data_loader.dgir import get_DGIR_data_loader
+from dl.data_loader.dgssr import get_DGSSR_data_loader
 from dl.optimizer import get_optimizer
 from dl.utils.writer import Writer
 from dl.utils.s2t import ms2st, ss2st
@@ -36,13 +36,13 @@ def get_args():
     parser.add_argument("--source", nargs='+')
     parser.add_argument("--target")
     parser.add_argument("--num_classes", "-c", type=int, default=7)
-    parser.add_argument("--num_usv_classes", type=int, default=4)
+    parser.add_argument("--num_usv_classes", type=int, default=25)
 
     parser.add_argument("--domains", nargs='+',
                         default=['cartoon'])
     parser.add_argument("--targets", nargs='+', default=['art_painting'])
     parser.add_argument("--repeat_times", type=int, default=1)
-    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.01, 12],[0.5, 0.75, 10]],
+    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.1],[0.5, 0.75]],
                         type=lambda params:[float(_) for _ in params.split(',')])
 
 
@@ -54,7 +54,6 @@ def get_args():
     parser.add_argument("--image_size", type=int, default=222)
     parser.add_argument("--val_size", type=float, default="0.1")
     parser.add_argument("--collect_per_batch", type=int, default=5)
-    parser.add_argument("--margin", type=int, default=50)
 
     # parser.add_argument("--tf_logger", type=bool, default=True)
     # parser.add_argument("--folder_name", default=None)
@@ -262,7 +261,6 @@ def iterate_args(args):
         args.params = params
         args.usvt_weight = params[0]
         args.original_img_prob = params[1]
-        args.margin = int(params[2])
 
         s2ts = ms2st(args.domains, args.targets)
         for s2t in s2ts:
@@ -300,12 +298,9 @@ def main():
 
             wandb.watch(model, log='all')
 
-        # data_loaders = get_DGR_data_loader(args.source, args.target, args.data_dir, args.val_size,
-        #                                    args.original_img_prob, args.batch_size,
-        #                                    args.max_num_s_img, args)
-        data_loaders = get_DGIR_data_loader(args.source, args.target, args.data_dir, args.val_size,
-                                           args.original_img_prob, args.batch_size,
-                                           args.max_num_s_img, args)
+        data_loaders = get_DGSSR_data_loader(args.source, args.target, args.data_dir, args.val_size,
+                                             args.original_img_prob, args.batch_size,
+                                             args.max_num_s_img, args)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
         Trainer(args, model, data_loaders, optimizer, scheduler, writer)

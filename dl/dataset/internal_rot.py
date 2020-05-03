@@ -48,6 +48,30 @@ def filter_mat4(size=227, margin=10, inside=1):
         mat = torch.ones((size, size)) - mat
     return mat
 
+def filter_mat9(size=227, margin=10, inside=1):
+    """
+
+    :param inside:
+    :param size:
+    :param margin:
+    :return:
+    """
+    # wide of internal square
+    wide = floor((size-4*margin)/3)
+    assert wide > 0
+    mat = torch.zeros((size, size))
+    if margin == 0:
+        mat = torch.ones((size, size))
+    else:
+        points = [margin, 2*margin+wide, 3*margin+2*wide]
+        for row in points:
+            for column in points:
+                mat[row:row+wide, column:column+wide] = 1
+
+    if inside == 0:
+        mat = torch.ones((size, size)) - mat
+    return mat
+
 
 class InternalRot(BaseDataset):
     def __init__(self, paths='', labels='', prob=float(0),
@@ -64,7 +88,7 @@ class InternalRot(BaseDataset):
         return to_t_tf_fn(img), n, label
 
     @staticmethod
-    def rotate(img, prob=float(0), margin=20, fm=filter_mat4):
+    def rotate(img, prob=float(0), margin=20, fm=filter_mat9):
         """
 
         :param margin:
