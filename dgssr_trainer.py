@@ -19,6 +19,9 @@ from dl.utils.pp import pretty_print as pp
 from dl.model import caffenet, resnet, mnist
 from dl.utils.result import Result
 from torchvision import transforms as tf
+from dl.utils.mm import monitor_memory
+
+
 
 model_fns = {
     'caffenet': caffenet.caffenet,
@@ -36,20 +39,20 @@ def get_args():
     parser.add_argument("--source", nargs='+')
     parser.add_argument("--target")
     parser.add_argument("--num_classes", "-c", type=int, default=7)
-    parser.add_argument("--num_usv_classes", type=int, default=25)
+    parser.add_argument("--num_usv_classes", type=int, default=5)
 
     parser.add_argument("--domains", nargs='+',
                         default=['cartoon'])
     parser.add_argument("--targets", nargs='+', default=['art_painting'])
     parser.add_argument("--repeat_times", type=int, default=1)
-    parser.add_argument("--parameters", nargs='+', default=[[0.5, 0.1],[0.5, 0.75]],
+    parser.add_argument("--parameters", nargs='+', default=[[0, 0.01],[0.5, 0.75]],
                         type=lambda params:[float(_) for _ in params.split(',')])
 
 
     parser.add_argument("--usvt_weight", type=float)
     parser.add_argument("--original_img_prob", default=None, type=float)
     parser.add_argument("--epochs", "-e", type=int, default=2)
-    parser.add_argument("--batch_size", "-b", type=int, default=32)
+    parser.add_argument("--batch_size", "-b", type=int, default=99)
     parser.add_argument("--learning_rate", "-l", type=float, default=.01)
     parser.add_argument("--image_size", type=int, default=222)
     parser.add_argument("--val_size", type=float, default="0.1")
@@ -61,7 +64,7 @@ def get_args():
                         default=f'{dirname(__file__)}/data/')
     parser.add_argument("--output_dir", default=f'{dirname(__file__)}/output/')
     parser.add_argument("--redirect_to_file", default='null')
-    parser.add_argument("--experiment", default='DG_irot')
+    parser.add_argument("--experiment", default='DG_ssr_PACS')
     parser.add_argument("--wandb", default=False, action='store_true')
 
     parser.add_argument("--classify_only_original_img", type=bool, default=True)
@@ -118,6 +121,7 @@ class Trainer:
         # TODO(lyj):
         for self.cur_epoch in range(self.args.epochs):
             self.train_epoch()
+
 
         r = Result()
         r.v_s_b_i = self.results["val_s"].argmax()
@@ -176,7 +180,12 @@ class Trainer:
             # table.add_data("acc", val_best.item(), test_best.item(), test_select.item())
             # wandb.log({"summary": table})
 
+        torch.cuda.empty_cache()
+
+
+
     def train_epoch(self):
+
         self.scheduler.step()
         lrs = self.scheduler.get_lr()
         criterion = nn.CrossEntropyLoss()
@@ -184,7 +193,12 @@ class Trainer:
         # Set the mode of the model to trainer, then the parameters can begin to be trained
         self.model.train()
         for i, (data, n, c_l) in enumerate(self.train_data_loader):
+
             data, n, c_l = data.to(self.device), n.to(self.device), c_l.to(self.device)
+            # for i in range(20):
+            #     print(n[i])
+            #     tf.ToPILImage()(data[i]).show()
+            #     print()
             self.optimizer.zero_grad()
 
             n_logit, c_l_logit = self.model(data)  # , lambda_val=lambda_val)
@@ -221,7 +235,8 @@ class Trainer:
                 pp(f'train_acc:s:{acc_s};u:{acc_u}')
                 pp(f'train_loss:s:{s_loss.item()};u:{us_loss.item()}')
 
-            del loss, s_loss, us_loss, n_logit, c_l_logit
+            # del loss, s_loss, us_loss, n_logit, c_l_logit
+            torch.cuda.empty_cache()
 
         # eval
         self.model.eval()
@@ -290,25 +305,30 @@ def main():
         model = model_fns[args.network](
             num_usv_classes=args.num_usv_classes,
             num_classes=args.num_classes)
+        monitor_memory()
+
         if args.wandb:
             tags = [args.source[0] + '_' + args.target, "_".join([str(_) for _ in args.params])]
             wandb.init(project=f'{args.experiment}_{args.network}', tags=tags,
                        dir=dirname(__file__), config=args, reinit=True,
                        name=f'{"-".join([str(_) for _ in args.params])}-{args.source[0]}-{args.target}')
 
-            wandb.watch(model, log='all')
+            # wandb.watch(model, log='all')
 
         data_loaders = get_DGSSR_data_loader(args.source, args.target, args.data_dir, args.val_size,
                                              args.original_img_prob, args.batch_size,
                                              args.max_num_s_img, args)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
-        Trainer(args, model, data_loaders, optimizer, scheduler, writer)
+        trainer = Trainer(args, model, data_loaders, optimizer, scheduler, writer)
 
         # torch.save(model.state_dict(), args.data_dir+'/cache/model.pkl')
         # wandb.save(args.data_dir+'/cache/model.pkl')
         if args.wandb:
             wandb.join()
+        del model, data_loaders, optimizer, scheduler, trainer
+
+
 
 if __name__ == "__main__":
     main()

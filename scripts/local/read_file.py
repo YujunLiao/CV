@@ -8,8 +8,7 @@ wb = Workbook()
 # grab the active worksheet
 ws = wb.active
 
-path = '/home/lyj/Files/project/pycharm/DG_rotation/trainer_utils/output_manager/output_file/'\
-+'era/DG_rotation/lenet/'
+path = '/home/lyj/Files/project/pycharm/CV/output/era/DG-ssr-ms-PACS-n-24out3-prelocal/caffenet/'
 path_of_different_parameter_pairs = os.listdir(path)
 path_of_different_parameter_pairs.sort()
 
@@ -18,7 +17,7 @@ row = 1
 for parameter_pair_path in path_of_different_parameter_pairs:
     path_of_different_domain_pairs= os.listdir(path + parameter_pair_path)
     path_of_different_domain_pairs.sort()
-    # path_of_different_domain_pairs = ['cartoon_art_painting','art_painting_cartoon',  'art_painting_sketch', 'art_painting_photo', ]
+    path_of_different_domain_pairs = ['cartoon_art_painting','art_painting_cartoon',  'art_painting_sketch', 'art_painting_photo', ]
     column = 0
     ws[chr(ord('A') + 1) + str(row)] = parameter_pair_path
     row += 1
@@ -36,7 +35,7 @@ for parameter_pair_path in path_of_different_parameter_pairs:
         for line in lines:
             words = line.split(' ')
             if words[0]=='Accuracy':
-                ws[chr(ord('A') + column) + str(row)] = words[11].split(':')[1][:-1]
+                ws[chr(ord('A') + column) + str(row)] = words[12][:-1]
                 row += 1
         row -= 4
         column += 1

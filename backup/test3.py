@@ -1,10 +1,5 @@
-def f1(**kwargs):
-    print(kwargs)
-    f2(**kwargs)
-    print()
+import torch
 
-def f2(**kwargs):
-    print(kwargs)
-    print()
+data = []
+n = torch.tensor(data)
 
-f1(x=10,y=100)

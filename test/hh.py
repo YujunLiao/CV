@@ -1,5 +1,5 @@
 from dl.data_loader.utils.get_p_l import get_p_l
-from dl.dataset import BaseDataset
+from dl.dataset.tf_fn import norm_tf_fn
 
 import torchvision.transforms as transforms
 
