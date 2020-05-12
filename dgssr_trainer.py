@@ -299,20 +299,20 @@ def main():
             output_dir=output_dir,
             file=f'{args.source[0]}_{args.target}'
         )
-        if args.redirect_to_file and args.redirect_to_file != 'null':
-            print('redirect to ', output_dir+args.redirect_to_file)
-            sys.stdout = open(output_dir+args.redirect_to_file, 'a')
+
         model = model_fns[args.network](
             num_usv_classes=args.num_usv_classes,
             num_classes=args.num_classes)
-        monitor_memory()
+        # monitor_memory()
 
         if args.wandb:
             tags = [args.source[0] + '_' + args.target, "_".join([str(_) for _ in args.params])]
             wandb.init(project=f'{args.experiment}_{args.network}', tags=tags,
                        dir=dirname(__file__), config=args, reinit=True,
                        name=f'{"-".join([str(_) for _ in args.params])}-{args.source[0]}-{args.target}')
-
+        if args.redirect_to_file and args.redirect_to_file != 'null':
+            print('redirect to ', output_dir + args.redirect_to_file)
+            sys.stdout = open(output_dir + args.redirect_to_file, 'a')
             # wandb.watch(model, log='all')
 
         data_loaders = get_DGSSR_data_loader(args.source, args.target, args.data_dir, args.val_size,
@@ -320,13 +320,12 @@ def main():
                                              args.max_num_s_img, args)
         optimizer = get_optimizer(model, lr=args.learning_rate, train_all=args.train_all_param)
         scheduler = optim.lr_scheduler.StepLR(optimizer, int(args.epochs * .8))
-        trainer = Trainer(args, model, data_loaders, optimizer, scheduler, writer)
+        Trainer(args, model, data_loaders, optimizer, scheduler, writer)
 
         # torch.save(model.state_dict(), args.data_dir+'/cache/model.pkl')
         # wandb.save(args.data_dir+'/cache/model.pkl')
         if args.wandb:
             wandb.join()
-        del model, data_loaders, optimizer, scheduler, trainer
 
 
 
