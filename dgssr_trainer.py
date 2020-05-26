@@ -39,11 +39,11 @@ def get_args():
     parser.add_argument("--source", nargs='+')
     parser.add_argument("--target")
     parser.add_argument("--num_classes", "-c", type=int, default=7)
-    parser.add_argument("--num_usv_classes", type=int, default=5)
+    parser.add_argument("--num_usv_classes", type=int, default=3)
 
     parser.add_argument("--domains", nargs='+',
-                        default=['cartoon'])
-    parser.add_argument("--targets", nargs='+', default=['art_painting'])
+                        default=['clipart'])
+    parser.add_argument("--targets", nargs='+', default=['infograph'])
     parser.add_argument("--repeat_times", type=int, default=1)
     parser.add_argument("--parameters", nargs='+', default=[[0, 0.01],[0.5, 0.75]],
                         type=lambda params:[float(_) for _ in params.split(',')])
@@ -326,7 +326,7 @@ def main():
         # wandb.save(args.data_dir+'/cache/model.pkl')
         if args.wandb:
             wandb.join()
-
+        torch.save(model.state_dict(), output_dir + args.target)
 
 
 if __name__ == "__main__":

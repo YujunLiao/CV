@@ -80,8 +80,8 @@ def get_img_transformed_25(img, n):
         imgs[2] = imgs[2].transpose(local_rot + 2)
 
     for i in range(4):
-        imgs[i] = norm_img(imgs[i])
-        # pass
+        # imgs[i] = norm_img(imgs[i])
+        pass
 
     img2 = Image.new('RGB', img.size)
     img2.paste(imgs[0], (0, 0))

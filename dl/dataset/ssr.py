@@ -1,6 +1,7 @@
 from math import floor
 from .base import BaseDataset
 from .base import BaseDataset
+from .rotation import Rotation
 from.tf_fn import train_tf_fn, test_tf_fn, tile_tf_fn, norm_tf_fn, to_t_tf_fn, to_i_tf_fn
 import numpy as np
 import torch
@@ -25,7 +26,8 @@ class SemanticSensitiveRot(BaseDataset):
     def __getitem__(self, index):
         img, label = super().__getitem__(index)
         # img, n = SemanticSensitiveRot.rotate(img, prob=self.prob)
-        img, n = SemanticSensitiveRot.rotate4(img, prob=self.prob)
+        img, n = SemanticSensitiveRot.deep_all(img, prob=self.prob)
+        #img, n = Rotation.rotate(img, prob=self.prob)
         return to_t_tf_fn(img), n, label
 
     @staticmethod
@@ -254,6 +256,11 @@ class SemanticSensitiveRot(BaseDataset):
 
 
         return img2, indice_dict[n]
+
+    @staticmethod
+    def deep_all(img, prob=float(0)):
+        return img, 0
+
 
 
 class SSRTrain(SemanticSensitiveRot):

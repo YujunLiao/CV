@@ -1,11 +1,31 @@
 # /home/giorgio/Files/pycharm_project/fmc/data/PACS/kfold/art_painting/dog/pic_001.jpg 0
 #/home/lyj/Files/project/pycharm/CV/dl/data/data/PACS/kfold/art_painting/dog/pic_001.jpg 0
 
+#for j in test train
+#do
+#  for i in /home/lyj/Files/project/pycharm/CV/data/${j}/*
+#  do
+#    for k in clipart infograph painting quickdraw real sketch
+#    do
+#      sed -i "s@${k}/@/home/giorgio/Files/pycharm_project/fmc/data/${k}/@g" $i
+#      echo $j $i
+#    done
+#  done
+#done
+
 for j in test train
 do
   for i in /home/lyj/Files/project/pycharm/CV/data/${j}/*
   do
-    sed -i "s@/home/lyj/Files/project/pycharm/CV/dl/data/data/@/home/lyj/Files/project/pycharm/CV/data/@g" $i
-    echo $j $i
+    if [ -f $i ]
+    then
+      names=$(echo $i | tr "_*" "\n")
+      for name in $names
+      do
+        echo ${name}
+        mv $i ${name}
+        break
+      done
+    fi
   done
 done

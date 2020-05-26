@@ -31,6 +31,7 @@ def p_and_l_from(files):
     paths = []
     labels = []
     for file in files:
+        print(f'read {file}')
         with open(file, 'r') as f:
             lines = f.readlines()
         for line in lines:

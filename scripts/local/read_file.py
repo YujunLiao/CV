@@ -8,7 +8,7 @@ wb = Workbook()
 # grab the active worksheet
 ws = wb.active
 
-path = '/home/lyj/Files/project/pycharm/CV/output/era/DG-ssr-ms-PACS-n-24out3-prelocal/caffenet/'
+path = '/home/lyj/Files/project/pycharm/CV/output/era/DG-rot2/caffenet/'
 path_of_different_parameter_pairs = os.listdir(path)
 path_of_different_parameter_pairs.sort()
 
