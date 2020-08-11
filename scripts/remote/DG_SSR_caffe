@@ -7,43 +7,36 @@
 
 # DG resnet-rotation Office-Home:65
 # s_rotation_weight bias_whole_image t_rotation_weight  entropy
-# 0.4,0.1 0.4,0.3 0.4,0.5
+
 
 # 0.1,0.8 0.3,0.8 0.5,0.8 0.7,0.8 0.9,0.8
 # 0.1,0.6 0.3,0.6 0.5,0.6 0.7,0.6 0.9,0.6
 # 0.1,0.4 0.3,0.4 0.5,0.4 0.7,0.4 0.9,0.4
 # 0.1,0.2 0.3,0.2 0.5,0.2 0.7,0.2 0.9,0.2
 
-# 0,1 0.1,0.8 0.5,0.8 0.9,0.8
-# 0.1,0.6 0.5,0.6 0.9,0.6
-# 0.1,0.4 0.5,0.4 0.9,0.4
-# 0.1,0.2 0.5,0.2 0.9,0.2
-
-# 0.3,0.1 0.3,0.3 0.3,0.5
-# 0.3,0.7 0.3,0.9 0.2,0.4
-# 0.4,0.4 0.6,0.4 0.7,0.4
-# 0.8,0.4 0.9,0.4
-
-# 0.1,0.6
+# 25 0,1 0.7,0.8 0.5,0.4
+# 5 0,1 0.5,0.6 0.5,0.4
+# 4 0,1 0.3,0.4 0.5,0.4
+# 3 0,1 0.3,0.2 0.5,0.4
 
 # -u 指 user 交互
 CUDA_VISIBLE_DEVICES=$1 \
 /home/giorgio/Files/pycharm_project/pytorch_interpreter/bin/python3.7 -u \
 /home/giorgio/Files/pycharm_project/CV/dgssr_trainer.py \
---redirect_to_file null \
---parameters   0,1   \
---domains  art_painting cartoon sketch photo   \
---targets     sketch        \
---num_classes 7 \
---repeat_times 1 \
+--redirect_to_file origin \
+--parameters  0,1 0.1,0.8 0.3,0.8 0.5,0.8 0.7,0.8 0.9,0.8 0.1,0.6 0.3,0.6 0.5,0.6 0.7,0.6 0.9,0.6 0.1,0.4 0.3,0.4 0.5,0.4 0.7,0.4 0.9,0.4 0.1,0.2 0.3,0.2 0.5,0.2 0.7,0.2 0.9,0.2 \
+--domains  clipart infograph painting quickdraw real sketch   \
+--targets     clipart        \
+--num_classes 100 \
+--repeat_times 2 \
 --network caffenet  --epochs 30 \
 --classify_only_original_img True    \
 --batch_size 128  --image_size 222 \
 --learning_rate 0.001 --val_size 0.1  \
 --train_all_param True   \
---min_scale 0.8 --max_scale 1.0 --random_horiz_flip 0 --jitter 0 --tile_random_grayscale 0.1 \
+--min_scale 0.8 --max_scale 1.0 --random_horiz_flip 0.5 --jitter 0.4 --tile_random_grayscale 0.1 \
 --max_num_s_img -1 \
---experiment compare \
+--experiment DG-DomainNet-ssr-25out4 \
 --wandb
 #--experiment DG-ssr-ms-domainnet-n-24out3-prelocal \
 #--wandb

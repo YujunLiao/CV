@@ -255,7 +255,7 @@ def main():
         # wandb.save(args.data_dir+'/cache/model.pkl')
         if args.wandb and args.nth_repeat == 0:
             wandb.join()
-        torch.save(model.state_dict(), output_dir+args.target)
+        #torch.save(model.state_dict(), output_dir+args.target)
 
 if __name__ == "__main__":
     main()

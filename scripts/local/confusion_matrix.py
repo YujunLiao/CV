@@ -74,15 +74,15 @@ def heatmap2d(arr: np.ndarray):
 
 # 'photo', 'art_painting', 'cartoon'
 project_path = '/home/giorgio/Files/pycharm_project/CV/'
-model_path = 'output/era/compare/caffenet/'
+model_path = 'output/era/spp2/caffenet/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model_fns['caffenet'](
-    num_usv_classes=3,
+    num_usv_classes=4,
     num_classes=7)
 model = model.to(device)
 begin_i, begin_j = 0, 0
 #for param in os.listdir(project_path+model_path):
-for param in ['0.0_1.0']:
+for param in ['0.7_0.7_2']:
     for target in ['sketch']:
         for prob in [1, 0.25]:
             # torch.cuda.set_device(0)
@@ -120,14 +120,14 @@ for param in ['0.0_1.0']:
                     chart.set_yticklabels(labels=categories)
                     plt.xlabel("Real")
                     plt.ylabel("Predict")
-                    plt.title('Deep all')
+                    plt.title('Standard rotation')
                     plt.show()
-                if prob == 0.25 or prob == 1:
+                if prob == 0.25:
                     #plt.figure(figsize=(16, 16))
                     chart = sns.heatmap(matrix_ust, annot=True, fmt='.1f', cmap='Reds', cbar=True, )
                     plt.xlabel("Real")
                     plt.ylabel("Predict")
-                    plt.title('Deep all')
+                    plt.title('Standard rotation')
                     plt.show()
                 print(param)
                 print(target)

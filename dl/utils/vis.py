@@ -28,7 +28,8 @@ def feature_map(model, imgs_t, wandb, skip_keys='usv'):
             imgs_t = layer(imgs_t)
             if 'conv' in name:
                 x1 = torch.reshape(imgs_t, (-1, 1, imgs_t.shape[2], imgs_t.shape[3]))
-                img_grid = vutils.make_grid(x1, normalize=True, scale_each=True, nrow=imgs_t.shape[1])  # normalize进行归一化处理
+                img_grid = vutils.make_grid(x1, normalize=True, scale_each=True, nrow=12)
+                                            # nrow=imgs_t.shape[0])  # normalize进行归一化处理
                 # tf.ToPILImage()(img_grid).show()
                 if wandb:
                     feature_maps.append(wandb.Image(tf.ToPILImage()(img_grid), caption=name.replace('.', '-')))

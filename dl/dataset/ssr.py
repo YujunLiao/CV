@@ -25,8 +25,8 @@ class SemanticSensitiveRot(BaseDataset):
 
     def __getitem__(self, index):
         img, label = super().__getitem__(index)
-        # img, n = SemanticSensitiveRot.rotate(img, prob=self.prob)
-        img, n = SemanticSensitiveRot.deep_all(img, prob=self.prob)
+        img, n = SemanticSensitiveRot.rotate3(img, prob=self.prob)
+        #img, n = SemanticSensitiveRot.deep_all(img, prob=self.prob)
         #img, n = Rotation.rotate(img, prob=self.prob)
         return to_t_tf_fn(img), n, label
 
@@ -167,7 +167,7 @@ class SemanticSensitiveRot(BaseDataset):
 
     @staticmethod
     def rotate4(img, prob=float(0)):
-        """24 kinds of rotation out 3
+        """24 kinds of rotation out 4
 
         :param img: <class 'PIL.Image'> image
         :param prob: probability of original image
@@ -277,8 +277,9 @@ class SSRTrain(SemanticSensitiveRot):
         img = train_tf_fn(self.args)(img)
         img = tile_tf_fn(self.args)(img)
         img_t = to_t_tf_fn(img)
-        if n==0:
-            img_t = norm_tf_fn(img_t)
+        # if n==0:
+        #     img_t = norm_tf_fn(img_t)
+        #img_t = norm_tf_fn(img_t)
         return img_t, n, label
 
 

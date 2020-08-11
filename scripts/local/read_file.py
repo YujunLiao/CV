@@ -8,7 +8,7 @@ wb = Workbook()
 # grab the active worksheet
 ws = wb.active
 
-path = '/home/lyj/Files/project/pycharm/CV/output/era/DG-rot2/caffenet/'
+path = '/home/lyj/Files/project/pycharm/CV/output/era/DG-VLCS-ssr-25out3/caffenet/'
 path_of_different_parameter_pairs = os.listdir(path)
 path_of_different_parameter_pairs.sort()
 
@@ -17,7 +17,9 @@ row = 1
 for parameter_pair_path in path_of_different_parameter_pairs:
     path_of_different_domain_pairs= os.listdir(path + parameter_pair_path)
     path_of_different_domain_pairs.sort()
-    path_of_different_domain_pairs = ['cartoon_art_painting','art_painting_cartoon',  'art_painting_sketch', 'art_painting_photo', ]
+    #path_of_different_domain_pairs = ['cartoon_art_painting','art_painting_cartoon',  'art_painting_sketch', 'art_painting_photo', ]
+    # CALTECH LABELME PASCAL SUN
+    path_of_different_domain_pairs = ['LABELME_CALTECH','CALTECH_LABELME',  'CALTECH_PASCAL', 'CALTECH_SUN', ]
     column = 0
     ws[chr(ord('A') + 1) + str(row)] = parameter_pair_path
     row += 1
