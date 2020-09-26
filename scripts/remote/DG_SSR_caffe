@@ -21,15 +21,15 @@
 
 # -u 指 user 交互
 CUDA_VISIBLE_DEVICES=$1 \
-/home/giorgio/Files/pycharm_project/pytorch_interpreter/bin/python3.7 -u \
-/home/giorgio/Files/pycharm_project/CV/dgssr_trainer.py \
---redirect_to_file origin \
---parameters  0,1 0.1,0.8 0.3,0.8 0.5,0.8 0.7,0.8 0.9,0.8 0.1,0.6 0.3,0.6 0.5,0.6 0.7,0.6 0.9,0.6 0.1,0.4 0.3,0.4 0.5,0.4 0.7,0.4 0.9,0.4 0.1,0.2 0.3,0.2 0.5,0.2 0.7,0.2 0.9,0.2 \
---domains  clipart infograph painting quickdraw real sketch   \
---targets     clipart        \
---num_classes 100 \
+/home/autolab/lyj/py_env1/bin/python3.7 -u \
+/home/autolab/lyj/project/CV/dgssr_trainer.py \
+--redirect_to_file null \
+--parameters  0,1  \
+--domains  art_painting cartoon sketch photo   \
+--targets     art_painting  \
+--num_classes 7 \
 --repeat_times 2 \
---network caffenet  --epochs 30 \
+--network caffenet  --epochs 2 \
 --classify_only_original_img True    \
 --batch_size 128  --image_size 222 \
 --learning_rate 0.001 --val_size 0.1  \
@@ -37,7 +37,7 @@ CUDA_VISIBLE_DEVICES=$1 \
 --min_scale 0.8 --max_scale 1.0 --random_horiz_flip 0.5 --jitter 0.4 --tile_random_grayscale 0.1 \
 --max_num_s_img -1 \
 --experiment DG-DomainNet-ssr-25out4 \
---wandb
+# --wandb
 #--experiment DG-ssr-ms-domainnet-n-24out3-prelocal \
 #--wandb
 # --min_scale 0.8 --max_scale 1.0 --random_horiz_flip 0.5 --jitter 0.4 --tile_random_grayscale 0.1 \

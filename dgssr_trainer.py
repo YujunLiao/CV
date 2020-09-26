@@ -313,7 +313,7 @@ def main():
         if args.redirect_to_file and args.redirect_to_file != 'null':
             print('redirect to ', output_dir + args.redirect_to_file)
             sys.stdout = open(output_dir + args.redirect_to_file, 'a')
-            # wandb.watch(model, log='all')
+            # wandb.watch(model, log='all') # can lead to continuous increment of GPU memory usage
 
         data_loaders = get_DGSSR_data_loader(args.source, args.target, args.data_dir, args.val_size,
                                              args.original_img_prob, args.batch_size,
